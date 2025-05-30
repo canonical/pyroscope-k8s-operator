@@ -12,7 +12,6 @@ from pyroscope import PyroscopeWorker
 logger = logging.getLogger(__name__)
 
 
-    
 class PyroscopeWorkerCharm(CharmBase):
     """Charmed Operator for Pyroscope; a distributed profiling backend."""
 
