@@ -10,7 +10,7 @@ from typing import Optional, Set, Tuple
 from coordinated_workers.coordinator import Coordinator
 from coordinated_workers.nginx import NginxConfig
 from ops.charm import CharmBase
-from pyroscope_config import PYROSCOPE_ROLES_CONFIG, PyroscopeRole
+from pyroscope_config import PYROSCOPE_ROLES_CONFIG
 from pyroscope import Pyroscope
 
 
@@ -144,6 +144,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
             Pyroscope.http_server_port,
         }
         return tuple(ports)
+
 
 if __name__ == "__main__":  # pragma: nocover
     from ops import main

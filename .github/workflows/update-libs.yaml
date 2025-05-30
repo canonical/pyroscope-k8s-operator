@@ -7,7 +7,15 @@ on:
     - cron: "0 0,4,8,12,16,20 * * *"
 
 jobs:
-  update-lib:
+  update-lib-coordinator:
     name: Check libraries
     uses: canonical/observability/.github/workflows/charm-update-libs.yaml@v1
     secrets: inherit
+    with:
+      charm-path: coordinator
+  update-lib-worker:
+    name: Check libraries
+    uses: canonical/observability/.github/workflows/charm-update-libs.yaml@v1
+    secrets: inherit
+    with:
+      charm-path: worker
