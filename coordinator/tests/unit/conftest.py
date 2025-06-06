@@ -42,6 +42,32 @@ def s3(s3_config):
     )
 
 @pytest.fixture(scope="function")
+def ingress_subpath():
+    return Relation(
+        "ingress",
+        remote_app_data={"ingress": json.dumps({
+            "url": "http://1.2.3.5/model-pyroscope-k8s"
+        })},
+        local_unit_data={
+            "host": "localhost",
+            "ip": "127.0.0.1",
+        }
+    )
+
+@pytest.fixture(scope="function")
+def ingress_subdomain():
+    return Relation(
+        "ingress",
+        remote_app_data={"ingress": json.dumps({
+            "url": "http://pyroscope-k8s.canonical.com"
+        })},
+        local_unit_data={
+            "host": "localhost",
+            "ip": "127.0.0.1",
+        }
+    )
+
+@pytest.fixture(scope="function")
 def all_worker():
     return Relation(
         "pyroscope-cluster",

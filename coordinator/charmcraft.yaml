@@ -93,6 +93,12 @@ requires:
     interface: catalogue
     description: |
       Integration to help users discover Pyroscope's UI.
+  ingress:
+    interface: ingress
+    optional: true
+    limit: 1
+    description: |
+      Ingress-per-app, to load-balance across multiple units of the coordinator.
 
 peers:
   peers:

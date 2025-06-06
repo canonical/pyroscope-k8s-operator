@@ -20,6 +20,7 @@ MINIO_APP = "minio"
 S3_APP = "s3-integrator"
 WORKER_APP = "pyroscope-worker"
 PYROSCOPE_APP = "pyroscope"
+TRAEFIK_APP = "trfk"
 
 logger = logging.getLogger(__name__)
 
@@ -135,3 +136,14 @@ def _deploy_and_configure_minio(juju: Juju):
     })
     task = juju.run(S3_APP + "/0", "sync-s3-credentials", params=keys)
     assert task.status == "completed"
+
+def get_ingress_proxied_hostname(juju: Juju):
+    status = juju.status()
+    status_msg = status.apps[TRAEFIK_APP].app_status.message
+
+    # hacky way to get ingress hostname, but it's the safest one.
+    if "Serving at" not in status_msg:
+        raise RuntimeError(
+            f"Ingressed hostname is not present in {TRAEFIK_APP} status message."
+        )
+    return status_msg.replace("Serving at", "").strip()

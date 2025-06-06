@@ -30,6 +30,24 @@ def state_with_s3_and_workers(all_worker, s3, nginx_container, nginx_prometheus_
     )
     return state
 
+@pytest.fixture
+def state_with_ingress_subdomain(all_worker, s3, nginx_container, nginx_prometheus_exporter_container, ingress_subdomain):
+    state = State(
+        leader=True,
+        relations=[all_worker, s3, ingress_subdomain],
+        containers=[nginx_container, nginx_prometheus_exporter_container],
+    )
+    return state
+
+@pytest.fixture
+def state_with_ingress_subpath(all_worker, s3, nginx_container, nginx_prometheus_exporter_container, ingress_subpath):
+    state = State(
+        leader=True,
+        relations=[all_worker, s3, ingress_subpath],
+        containers=[nginx_container, nginx_prometheus_exporter_container],
+    )
+    return state
+
 @pytest.mark.parametrize("workers_no", (1,3))
 def test_memberlist_config(workers_no, context, state_with_s3_and_workers, all_worker, s3):
     # GIVEN an s3 relation and a worker relation that has n units
@@ -152,3 +170,38 @@ def test_s3_storage_config(context, state_with_s3_and_workers):
         assert "storage" in actual_config_dict
         # AND this config contains the s3 config as upstream defines it
         assert actual_config_dict["storage"] == expected_config
+
+def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
+    with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
+        charm: PyroscopeCoordinatorCharm = mgr.charm
+        actual_config = charm.pyroscope.config(charm.coordinator)
+        actual_config_dict = yaml.safe_load(actual_config)
+        expected_config = {}
+        # THEN api config portion is generated
+        assert "api" in actual_config_dict
+        # AND this config doesn't contain the base-url
+        assert actual_config_dict["api"] == expected_config
+
+def test_base_url_config_with_ingress_on_subdomain(context, state_with_ingress_subdomain):
+    with context(context.on.config_changed(), state_with_ingress_subdomain) as mgr:
+        charm: PyroscopeCoordinatorCharm = mgr.charm
+        actual_config = charm.pyroscope.config(charm.coordinator)
+        actual_config_dict = yaml.safe_load(actual_config)
+        expected_config = {}
+        # THEN api config portion is generated
+        assert "api" in actual_config_dict
+        # AND this config doesn't contain the base-url
+        assert actual_config_dict["api"] == expected_config
+
+def test_base_url_config_with_ingress_on_subpath(context, state_with_ingress_subpath):
+    with context(context.on.config_changed(), state_with_ingress_subpath) as mgr:
+        charm: PyroscopeCoordinatorCharm = mgr.charm
+        actual_config = charm.pyroscope.config(charm.coordinator)
+        actual_config_dict = yaml.safe_load(actual_config)
+        expected_config = {
+            "base-url": "/model-pyroscope-k8s"
+        }
+        # THEN api config portion is generated
+        assert "api" in actual_config_dict
+        # AND this config contains the base-url used by pyroscope-UI to point at the right endpoints
+        assert actual_config_dict["api"] == expected_config

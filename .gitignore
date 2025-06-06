@@ -173,3 +173,6 @@ cython_debug/
 .pypirc
 
 *.charm
+
+# PyCharm
+.idea/

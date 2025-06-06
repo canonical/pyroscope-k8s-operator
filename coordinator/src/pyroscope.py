@@ -6,6 +6,7 @@
 
 from typing import Dict, Optional, Set, Tuple
 from coordinated_workers.coordinator import Coordinator
+from urllib.parse import urlparse
 import yaml
 import pyroscope_config
 
@@ -25,7 +26,9 @@ class Pyroscope:
         """Generate the Pyroscope configuration."""
         addrs = coordinator.cluster.gather_addresses()
         addrs_by_role = coordinator.cluster.gather_addresses_by_role()
+        external_url = coordinator._external_url
         config = pyroscope_config.PyroscopeConfig(
+            api=self._build_api_config(external_url),
             server= self._build_server_config(),
             distributor=self._build_distributor_config(),
             ingester=self._build_ingester_config(addrs_by_role),
@@ -95,3 +98,15 @@ class Pyroscope:
                     )
                 )
             )
+
+    def _build_api_config(self, external_url):
+        if external_url:
+            base_url = self._base_url(external_url)
+            if base_url == "" or base_url == "/":
+                # we're behind ingress, but on a root path
+                return pyroscope_config.Api()
+            return pyroscope_config.Api(base_url=base_url) # pyright: ignore[reportCallIssue]
+        return pyroscope_config.Api()
+
+    def _base_url(self, external_url):
+        return urlparse(external_url).path

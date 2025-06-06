@@ -7,13 +7,17 @@
 import logging
 import socket
 from typing import Optional, Set, Tuple
+from urllib.parse import urlparse
+
+from charms.traefik_k8s.v2.ingress import IngressPerAppReadyEvent, IngressPerAppRequirer
 from coordinated_workers.coordinator import Coordinator
 from coordinated_workers.nginx import NginxConfig
 from ops.charm import CharmBase
-from pyroscope_config import PYROSCOPE_ROLES_CONFIG
+from ops.model import ModelError
+
+from nginx_config import NginxHelper
 from pyroscope import Pyroscope
-
-
+from pyroscope_config import PYROSCOPE_ROLES_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +27,17 @@ class PyroscopeCoordinatorCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self._nginx_container = self.unit.get_container("nginx")
+        self._nginx_prometheus_exporter_container = self.unit.get_container(
+            "nginx-prometheus-exporter"
+        )
+        self._nginx_helper = NginxHelper(self._nginx_container)
+        self.ingress = IngressPerAppRequirer(
+            charm=self,
+            port=urlparse(self._internal_url).port,
+            strip_prefix=True,
+            scheme=lambda: urlparse(self._internal_url).scheme,
+        )
         self.pyroscope = Pyroscope()
         self.coordinator = Coordinator(
             charm=self,
@@ -44,9 +59,9 @@ class PyroscopeCoordinatorCharm(CharmBase):
             },
             nginx_config=NginxConfig(
                 server_name=self.hostname,
-                # FIXME: populate nginx config with upstreams and locations
-                upstream_configs= [],
-                server_ports_to_locations={},
+                upstream_configs=self._nginx_helper.upstreams(),
+                server_ports_to_locations=self._nginx_helper.server_ports_to_locations(),
+                enable_status_page=True,
             ),
             workers_config=self.pyroscope.config,
             worker_ports=self._get_worker_ports,
@@ -57,6 +72,12 @@ class PyroscopeCoordinatorCharm(CharmBase):
 
         # do this regardless of what event we are processing
         self._reconcile()
+
+        ######################################
+        # === EVENT HANDLER REGISTRATION === #
+        ######################################
+        self.framework.observe(self.ingress.on.ready, self._on_ingress_ready)
+        self.framework.observe(self.ingress.on.revoked, self._on_ingress_revoked)
 
 
     ######################
@@ -97,12 +118,16 @@ class PyroscopeCoordinatorCharm(CharmBase):
     @property
     def _internal_url(self) -> str:
         """Return the locally addressable, FQDN based service address."""
-        return f"{self._scheme}://{self.service_hostname}"
+        return f"{self._scheme}://{self.service_hostname}:8080"
 
     @property
     def _external_url(self) -> Optional[str]:
         """Return the external URL if the ingress is configured and ready, otherwise None."""
-        # FIXME: return ingress url once we have ingress configuration
+        try:
+            if ingress_url := self.ingress.url:
+                return ingress_url
+        except ModelError as e:
+            logger.error("Failed obtaining external url: %s.", e)
         return None
     
     @property
@@ -124,6 +149,16 @@ class PyroscopeCoordinatorCharm(CharmBase):
     ##################
     # EVENT HANDLERS #
     ##################
+
+    def _on_ingress_ready(self, event: IngressPerAppReadyEvent):
+        """Log the obtained ingress address.
+        """
+        logger.info("Ingress for app ready on '%s'", event.url)
+
+    def _on_ingress_revoked(self, _) -> None:
+        """Log the ingress address being revoked.
+        """
+        logger.info("Ingress for app revoked")
 
     ###################
     # UTILITY METHODS #

@@ -6,7 +6,7 @@
 from enum import StrEnum, unique
 from typing import List, Optional
 from coordinated_workers.coordinator import ClusterRolesConfig
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 @unique
 class PyroscopeRole(StrEnum):
@@ -104,6 +104,14 @@ class ShardingRingCompactor(BaseModel):
     """Compactor ShardingRing schema."""
     kvstore: Kvstore
 
+class Api(BaseModel):
+    """Api schema."""
+    base_url: Optional[str] = Field(alias='base-url', default=None) # this is the only field with dash in the entire config
+
+    model_config = {
+        'populate_by_name': True
+    }
+
 class Server(BaseModel):
     """Server schema."""
     http_listen_port: int
@@ -150,6 +158,7 @@ class DB(BaseModel):
 
 class PyroscopeConfig(BaseModel):
     """PyroscopeConfig config schema."""
+    api: Api
     server: Server
     distributor: Distributor
     ingester: Ingester
