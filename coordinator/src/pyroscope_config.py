@@ -83,6 +83,11 @@ PYROSCOPE_ROLES_CONFIG = ClusterRolesConfig(
 )
 # Define the configuration for Pyroscope roles.
 
+class TLSConfig(BaseModel):
+    """TLS config schema."""
+    cert_file: str
+    key_file: str
+    client_ca_file: str
 
 class Kvstore(BaseModel):
     """Kvstore schema."""
@@ -129,6 +134,7 @@ class Server(BaseModel):
     """Server schema."""
 
     http_listen_port: int
+    http_tls_config: Optional[TLSConfig] = None
 
 
 class Ingester(BaseModel):
@@ -148,6 +154,11 @@ class Memberlist(BaseModel):
 
     bind_port: int
     join_members: List[str]
+    tls_enabled: bool = False
+    tls_cert_path: Optional[str] = None
+    tls_key_path: Optional[str] = None
+    tls_ca_path: Optional[str] = None
+
 
 
 class S3Storage(BaseModel):
@@ -185,6 +196,12 @@ class DB(BaseModel):
 
     data_path: str
 
+class GrpcClient(BaseModel):
+    """GRPC client schema."""
+    tls_enabled: bool = False
+    tls_cert_path: Optional[str] = None
+    tls_key_path: Optional[str] = None
+    tls_ca_path: Optional[str] = None
 
 class PyroscopeConfig(BaseModel):
     """PyroscopeConfig config schema."""
@@ -198,3 +215,4 @@ class PyroscopeConfig(BaseModel):
     storage: Storage
     compactor: Compactor
     pyroscopedb: DB
+    grpc_client: GrpcClient

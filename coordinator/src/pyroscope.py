@@ -15,6 +15,10 @@ class Pyroscope:
     """Class representing the Pyroscope client workload configuration."""
 
     _data_path = "/pyroscope-data"
+    # cert paths on pyroscope container
+    tls_cert_path = "/etc/worker/server.cert"
+    tls_key_path = "/etc/worker/private.key"
+    tls_ca_path = "/usr/local/share/ca-certificates/ca.crt"
     # this is the single source of truth for which ports are opened and configured
     # in the distributed Pyroscope deployment
     memberlist_port = 7946
@@ -30,23 +34,30 @@ class Pyroscope:
         external_url = coordinator._external_url
         config = pyroscope_config.PyroscopeConfig(
             api=self._build_api_config(external_url),
-            server=self._build_server_config(),
+            server= self._build_server_config(coordinator.tls_available),
             distributor=self._build_distributor_config(),
             ingester=self._build_ingester_config(addrs_by_role),
             store_gateway=self._build_store_gateway_config(addrs_by_role),
-            memberlist=self._build_memberlist_config(addrs),
+            memberlist=self._build_memberlist_config(addrs, coordinator.tls_available),
             storage=self._build_storage_config(coordinator._s3_config),
             compactor=self._build_compactor_config(),
             pyroscopedb=self._build_pyroscope_db(),
+            grpc_client=self._build_grpc_client_config(coordinator.tls_available),
         )
         return yaml.dump(
             config.model_dump(mode="json", by_alias=True, exclude_none=True)
         )
 
-    def _build_server_config(self):
-        return pyroscope_config.Server(
-            http_listen_port=self.http_server_port,
-        )
+    def _build_server_config(self, tls=False):
+        server_config = pyroscope_config.Server(http_listen_port=self.http_server_port)
+        if tls:
+            server_config.http_tls_config = pyroscope_config.TLSConfig(
+                                                    cert_file=self.tls_cert_path,
+                                                    key_file=self.tls_key_path,
+                                                    client_ca_file=self.tls_ca_path
+                                                    )
+        return server_config
+
 
     def _build_ingester_config(self, roles_addresses: Dict[str, Set[str]]):
         ingester_addresses = roles_addresses.get(
@@ -77,8 +88,8 @@ class Pyroscope:
             )
         )
 
-    def _build_memberlist_config(self, worker_peers: Optional[Tuple[str, ...]]):
-        return pyroscope_config.Memberlist(
+    def _build_memberlist_config(self, worker_peers: Optional[Tuple[str, ...]], tls = False):
+        memberlist_config = pyroscope_config.Memberlist(
             bind_port=self.memberlist_port,
             join_members=(
                 [f"{peer}:{self.memberlist_port}" for peer in worker_peers]
@@ -86,6 +97,12 @@ class Pyroscope:
                 else []
             ),
         )
+        if tls:
+            memberlist_config.tls_enabled = True
+            memberlist_config.tls_cert_path = self.tls_cert_path
+            memberlist_config.tls_key_path = self.tls_key_path
+            memberlist_config.tls_ca_path = self.tls_ca_path
+        return memberlist_config
 
     def _build_storage_config(self, s3_config: dict):
         return pyroscope_config.Storage(
@@ -122,3 +139,12 @@ class Pyroscope:
 
     def _base_url(self, external_url):
         return urlparse(external_url).path
+    
+    def _build_grpc_client_config(self, tls=False):
+        client_config = pyroscope_config.GrpcClient()
+        if tls:
+            client_config.tls_enabled = True
+            client_config.tls_cert_path = self.tls_cert_path
+            client_config.tls_key_path = self.tls_key_path
+            client_config.tls_ca_path = self.tls_ca_path
+        return client_config
