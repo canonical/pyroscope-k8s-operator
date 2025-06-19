@@ -1,10 +1,12 @@
 import json
+from unittest.mock import patch
 import pytest
 from dataclasses import replace
 
 import yaml
 
 from charm import PyroscopeCoordinatorCharm
+from pyroscope import Pyroscope
 from ops.testing import State
 
 def get_worker_unit_data(unit_no):
@@ -48,8 +50,9 @@ def state_with_ingress_subpath(all_worker, s3, nginx_container, nginx_prometheus
     )
     return state
 
+@pytest.mark.parametrize("tls", (False,True))
 @pytest.mark.parametrize("workers_no", (1,3))
-def test_memberlist_config(workers_no, context, state_with_s3_and_workers, all_worker, s3):
+def test_memberlist_config(workers_no, tls, context, state_with_s3_and_workers, all_worker, s3):
     # GIVEN an s3 relation and a worker relation that has n units
     workers = replace(
         all_worker,
@@ -61,33 +64,52 @@ def test_memberlist_config(workers_no, context, state_with_s3_and_workers, all_w
     state = replace(state_with_s3_and_workers, relations={workers,s3})
 
     # WHEN an event is fired
-    with context(context.on.relation_changed(workers), state) as mgr:
-        charm: PyroscopeCoordinatorCharm = mgr.charm
-        actual_config = charm.pyroscope.config(charm.coordinator)
-        actual_config_dict = yaml.safe_load(actual_config)
-        expected_memberlist_config = {
-            "bind_port": 7946,
-            "join_members": [f"worker-{worker_idx}.test.svc.cluster.local:7946" for worker_idx in range(workers_no)]
-        }
-        # THEN memberlist config portion is generated
-        assert "memberlist" in actual_config_dict
-        # AND this config contains all worker units as members
-        assert actual_config_dict["memberlist"] == expected_memberlist_config
+    with patch("coordinated_workers.coordinator.Coordinator.tls_available", tls):
+        with context(context.on.relation_changed(workers), state) as mgr:
+            charm: PyroscopeCoordinatorCharm = mgr.charm
+            actual_config = charm.pyroscope.config(charm.coordinator)
+            actual_config_dict = yaml.safe_load(actual_config)
+            expected_memberlist_config = {
+                "bind_port": 7946,
+                "join_members": [f"worker-{worker_idx}.test.svc.cluster.local:7946" for worker_idx in range(workers_no)],
+                "tls_enabled": tls,
+                 **(
+                {
+                    "tls_cert_path": Pyroscope.tls_cert_path,
+                    "tls_key_path": Pyroscope.tls_key_path,
+                    "tls_ca_path": Pyroscope.tls_ca_path,
+                }
+                if tls
+                else {}
+                ),
+            }
+            # THEN memberlist config portion is generated
+            assert "memberlist" in actual_config_dict
+            # AND this config contains all worker units as members + tls config if enabled
+            assert actual_config_dict["memberlist"] == expected_memberlist_config
 
-def test_server_config(context, state_with_s3_and_workers):
+@pytest.mark.parametrize("tls", (False,True))
+def test_server_config(context, state_with_s3_and_workers, tls):
     # GIVEN an s3 relation and a worker relation
     # WHEN an event is fired
-    with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
-        charm: PyroscopeCoordinatorCharm = mgr.charm
-        actual_config = charm.pyroscope.config(charm.coordinator)
-        actual_config_dict = yaml.safe_load(actual_config)
-        expected_config = {
-            "http_listen_port": 4040,
-        }
-        # THEN server config portion is generated
-        assert "server" in actual_config_dict
-        # AND this config contains both http and grpc server ports
-        assert actual_config_dict["server"] == expected_config
+    with patch("coordinated_workers.coordinator.Coordinator.tls_available", tls):
+        with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
+            charm: PyroscopeCoordinatorCharm = mgr.charm
+            actual_config = charm.pyroscope.config(charm.coordinator)
+            actual_config_dict = yaml.safe_load(actual_config)
+            expected_config = {
+                "http_listen_port": 4040,
+            }
+            if tls:
+                expected_config["http_tls_config"] = {
+                    "cert_file": Pyroscope.tls_cert_path,
+                    "key_file": Pyroscope.tls_key_path,
+                    "client_ca_file": Pyroscope.tls_ca_path,
+                }
+            # THEN server config portion is generated
+            assert "server" in actual_config_dict
+            # AND this config contains both http and grpc server ports + tls config if enabled
+            assert actual_config_dict["server"] == expected_config
 
 
 @pytest.mark.parametrize("workers_no", (1,3))
@@ -170,6 +192,32 @@ def test_s3_storage_config(context, state_with_s3_and_workers):
         assert "storage" in actual_config_dict
         # AND this config contains the s3 config as upstream defines it
         assert actual_config_dict["storage"] == expected_config
+
+@pytest.mark.parametrize("tls", (False,True))
+def test_grpc_client_config(context, state_with_s3_and_workers, tls):
+    # GIVEN an s3 relation and a worker relation
+    # WHEN an event is fired
+    with patch("coordinated_workers.coordinator.Coordinator.tls_available", tls):
+        with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
+            charm: PyroscopeCoordinatorCharm = mgr.charm
+            actual_config = charm.pyroscope.config(charm.coordinator)
+            actual_config_dict = yaml.safe_load(actual_config)
+            expected_config = {
+                "tls_enabled": tls,
+                **(
+                {
+                    "tls_cert_path": Pyroscope.tls_cert_path,
+                    "tls_key_path": Pyroscope.tls_key_path,
+                    "tls_ca_path": Pyroscope.tls_ca_path,
+                }
+                if tls
+                else {}
+                ),
+            }
+            # THEN grpc client config portion is generated
+            assert "grpc_client" in actual_config_dict
+            # AND this config contains the grpc_client config + tls config if enabled
+            assert actual_config_dict["grpc_client"] == expected_config
 
 def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
     with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:

@@ -19,7 +19,7 @@ _nginx_port = 8080
 _nginx_tls_port = 443
 
 _locations_write: List[NginxLocationConfig] = [
-    NginxLocationConfig(path="/ingest", backend="ingester",modifier="="),
+    NginxLocationConfig(path="/ingest", backend="distributor",modifier="="),
 ]
 
 _locations_query_frontend: List[NginxLocationConfig] = [
