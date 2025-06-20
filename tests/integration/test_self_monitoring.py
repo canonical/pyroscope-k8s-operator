@@ -37,12 +37,12 @@ def test_deploy_distributed_pyroscope(juju: Juju):
 def test_deploy_self_monitoring_stack(juju: Juju):
     # GIVEN a model
     # WHEN we deploy a monitoring stack
-    juju.deploy("prometheus-k8s", app=PROMETHEUS_APP, channel="edge", trust=True)
-    juju.deploy("loki-k8s", app=LOKI_APP, channel="edge", trust=True)
+    juju.deploy("prometheus-k8s", app=PROMETHEUS_APP, channel="1/stable", trust=True)
+    juju.deploy("loki-k8s", app=LOKI_APP, channel="1/stable", trust=True)
 
     # tracing
-    juju.deploy("tempo-coordinator-k8s", app=TEMPO_APP, channel="edge", trust=True)
-    juju.deploy("tempo-worker-k8s", app=TEMPO_WORKER_APP, channel="edge", trust=True)
+    juju.deploy("tempo-coordinator-k8s", app=TEMPO_APP, channel="1/stable", trust=True)
+    juju.deploy("tempo-worker-k8s", app=TEMPO_WORKER_APP, channel="1/stable", trust=True)
     juju.integrate(TEMPO_APP, TEMPO_WORKER_APP)
 
     # deploys the s3 integrator and creates the bucket on the s3 backend
@@ -93,7 +93,7 @@ def test_self_monitoring_metrics_ingestion(juju: Juju):
             assert False, f"Request to Prometheus failed for app '{app}': {e}"
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(10))
+@retry(stop=stop_after_attempt(15), wait=wait_fixed(30))
 def test_self_monitoring_charm_traces_ingestion(juju: Juju):
     # GIVEN a pyroscope cluster integrated with tempo over charm-tracing
     address = get_unit_ip_address(juju, TEMPO_APP, 0)
@@ -102,7 +102,7 @@ def test_self_monitoring_charm_traces_ingestion(juju: Juju):
     response = requests.get(url)
     tags = response.json()['tagValues']
     # THEN we can find each pyroscope charm has sent some charm traces
-    for app in (PYROSCOPE_APP, ): # todo: add *ALL_WORKERS
+    for app in (PYROSCOPE_APP, *ALL_WORKERS):
         assert app in tags
 
 

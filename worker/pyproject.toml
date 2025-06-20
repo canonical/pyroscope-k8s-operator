@@ -6,8 +6,8 @@ version = "0.1"  # this is in fact irrelevant
 requires-python = ">=3.12"
 
 dependencies = [
-    "ops",
-    "coordinated-workers"
+    "ops[tracing]",
+    "coordinated-workers>=1.0.1",
 ]
 
 [project.optional-dependencies]

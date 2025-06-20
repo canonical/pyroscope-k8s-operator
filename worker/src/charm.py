@@ -7,6 +7,7 @@
 import logging
 
 from ops.charm import CharmBase
+
 from pyroscope import PyroscopeWorker
 
 logger = logging.getLogger(__name__)
@@ -15,11 +16,9 @@ logger = logging.getLogger(__name__)
 class PyroscopeWorkerCharm(CharmBase):
     """Charmed Operator for Pyroscope; a distributed profiling backend."""
 
-
     def __init__(self, *args):
         super().__init__(*args)
         self.worker = PyroscopeWorker(self)
-
 
 if __name__ == "__main__":  # pragma: nocover
     from ops import main

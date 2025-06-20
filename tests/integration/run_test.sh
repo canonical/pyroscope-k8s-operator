@@ -4,6 +4,11 @@
 export COORDINATOR_CHARM_PATH=./coordinator/pyroscope-coordinator-k8s_ubuntu@24.04-amd64.charm
 export WORKER_CHARM_PATH=./worker/pyroscope-worker-k8s_ubuntu@24.04-amd64.charm
 
-echo "usage: sh ./tests/integration/run_tests.sh test_foo [PYTEST_JUBILANT_OPTIONS]"
+if [[ $# -eq 0 ]] ; then
+    echo "usage: ./tests/integration/run_tests.sh test_foo [PYTEST_JUBILANT_OPTIONS]"
+    echo "for example: ./tests/integration/run_tests.sh test_self_monitoring --model bar --no-teardown --switch"
+    exit 0
+fi
+
 echo "RUNNING:" tox -e integration -- -k $1 "${@:2}"
 tox -e integration -- -k $1 "${@:2}"
