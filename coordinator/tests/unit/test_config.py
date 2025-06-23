@@ -215,8 +215,9 @@ def test_s3_storage_config(context, state_with_s3_and_workers):
         # AND this config contains the s3 config as upstream defines it
         assert actual_config_dict["storage"] == expected_config
 
+@pytest.mark.parametrize("component", ("frontend","frontend_worker", "query_scheduler"))
 @pytest.mark.parametrize("tls", (False,True))
-def test_grpc_client_config(context, state_with_s3_and_workers, tls):
+def test_grpc_client_config(context, state_with_s3_and_workers, tls, component):
     # GIVEN an s3 relation and a worker relation
     # WHEN an event is fired
     with patch("coordinated_workers.coordinator.Coordinator.tls_available", tls):
@@ -236,10 +237,11 @@ def test_grpc_client_config(context, state_with_s3_and_workers, tls):
                 else {}
                 ),
             }
-            # THEN grpc client config portion is generated
-            assert "grpc_client" in actual_config_dict
-            # AND this config contains the grpc_client config + tls config if enabled
-            assert actual_config_dict["grpc_client"] == expected_config
+            # THEN `component` config portion is generated
+            assert component in actual_config_dict
+            # AND if TLS is enabled, this config contains the grpc_client TLS config
+            if tls:
+                assert actual_config_dict[component]["grpc_client_config"] == expected_config
 
 def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
     with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:

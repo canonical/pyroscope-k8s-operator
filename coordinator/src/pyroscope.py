@@ -36,13 +36,15 @@ class Pyroscope:
             api=self._build_api_config(external_url),
             server= self._build_server_config(coordinator.tls_available),
             distributor=self._build_distributor_config(),
+            frontend=self._build_frontend_config(coordinator.tls_available),
+            frontend_worker=self._build_frontend_worker_config(coordinator.tls_available),
+            query_scheduler=self._build_query_scheduler_config(coordinator.tls_available),
             ingester=self._build_ingester_config(addrs_by_role),
             store_gateway=self._build_store_gateway_config(addrs_by_role),
             memberlist=self._build_memberlist_config(addrs, coordinator.tls_available),
             storage=self._build_storage_config(coordinator._s3_config),
             compactor=self._build_compactor_config(),
             pyroscopedb=self._build_pyroscope_db(),
-            grpc_client=self._build_grpc_client_config(coordinator.tls_available),
         )
         return yaml.dump(
             config.model_dump(mode="json", by_alias=True, exclude_none=True)
@@ -141,13 +143,27 @@ class Pyroscope:
         return urlparse(external_url).path
     
     def _build_grpc_client_config(self, tls=False):
-        tls_config = {
-                "tls_cert_path": self.tls_cert_path,
-                "tls_key_path": self.tls_key_path,
-                "tls_ca_path": self.tls_ca_path,
-                } if tls else {}
-        client_config = pyroscope_config.GrpcClient(
-            tls_enabled=tls,
-            **tls_config,
+        return pyroscope_config.GrpcClient(
+            tls_enabled=True,
+            tls_cert_path=self.tls_cert_path,
+            tls_key_path= self.tls_key_path,
+            tls_ca_path=self.tls_ca_path,
+        ) if tls else None
+
+    def _build_frontend_config(self, tls=False):
+        frontend_config = pyroscope_config.Frontend(
+            grpc_client_config=self._build_grpc_client_config(tls),
         )
-        return client_config
+        return frontend_config
+    
+    def _build_frontend_worker_config(self, tls=False):
+        frontend_worker_config = pyroscope_config.FrontendWorker(
+            grpc_client_config=self._build_grpc_client_config(tls),
+        )
+        return frontend_worker_config
+
+    def _build_query_scheduler_config(self, tls=False):
+        query_scheduler_config = pyroscope_config.QueryScheduler(
+            grpc_client_config=self._build_grpc_client_config(tls),
+        )
+        return query_scheduler_config
