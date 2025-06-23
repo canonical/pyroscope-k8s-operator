@@ -122,7 +122,6 @@ def test_server_config(context, state_with_s3_and_workers, tls):
                 expected_config["http_tls_config"] = {
                     "cert_file": Pyroscope.tls_cert_path,
                     "key_file": Pyroscope.tls_key_path,
-                    "client_ca_file": Pyroscope.tls_ca_path,
                 }
             # THEN server config portion is generated
             assert "server" in actual_config_dict

@@ -87,7 +87,6 @@ class TLSConfig(BaseModel):
     """TLS config schema."""
     cert_file: str
     key_file: str
-    client_ca_file: str
 
 class Kvstore(BaseModel):
     """Kvstore schema."""
@@ -206,6 +205,7 @@ class GrpcClient(BaseModel):
 class Frontend(BaseModel):
     """Query frontend schema."""
     grpc_client_config: Optional[GrpcClient]
+    instance_addr: str
 
 class FrontendWorker(BaseModel):
     """Frontend worker schema."""

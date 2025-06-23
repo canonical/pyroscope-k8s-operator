@@ -24,6 +24,10 @@ class Pyroscope:
     memberlist_port = 7946
     http_server_port = 4040
 
+    def __init__(self, app_hostname: str):
+        self._app_hostname = app_hostname
+          
+
     def config(
         self,
         coordinator: Coordinator,
@@ -54,7 +58,6 @@ class Pyroscope:
         tls_config = pyroscope_config.TLSConfig(
                         cert_file=self.tls_cert_path,
                         key_file=self.tls_key_path,
-                        client_ca_file=self.tls_ca_path
                     ) if tls else None
         server_config = pyroscope_config.Server(
                 http_listen_port=self.http_server_port,
@@ -153,6 +156,8 @@ class Pyroscope:
     def _build_frontend_config(self, tls=False):
         frontend_config = pyroscope_config.Frontend(
             grpc_client_config=self._build_grpc_client_config(tls),
+            # proxy to the coordinator, which will in turn, proxy to the query-frontend apps
+            instance_addr=self._app_hostname,
         )
         return frontend_config
     
