@@ -175,15 +175,29 @@ class GrpcClient(BaseModel):
     tls_key_path: Optional[str] = None
     tls_ca_path: Optional[str] = None
 
+class Frontend(BaseModel):
+    """Query frontend schema."""
+    grpc_client_config: Optional[GrpcClient]
+
+class FrontendWorker(BaseModel):
+    """Frontend worker schema."""
+    grpc_client_config: Optional[GrpcClient]
+
+class QueryScheduler(BaseModel):
+    """Query scheduler schema."""
+    grpc_client_config: Optional[GrpcClient]
+
 class PyroscopeConfig(BaseModel):
     """PyroscopeConfig config schema."""
     api: Api
     server: Server
     distributor: Distributor
+    frontend: Frontend
+    frontend_worker: FrontendWorker
+    query_scheduler: QueryScheduler
     ingester: Ingester
     store_gateway: StoreGateway
     memberlist: Memberlist
     storage: Storage
     compactor: Compactor
     pyroscopedb: DB
-    grpc_client: GrpcClient
