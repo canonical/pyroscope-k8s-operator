@@ -7,8 +7,12 @@ requires-python = ">=3.12"
 
 dependencies = [
     "ops[tracing]",
-    "coordinated-workers",
+    # FIXME: use pinned coordinated-workers
+    "coordinated-workers@git+https://github.com/canonical/cos-coordinated-workers@tls-v4",
     "pydantic<3",
+    # ---PYDEPS---
+    # lib/charms/tls_certificates_interface/v4/tls_certificates.py
+    "cryptography",
 ]
 
 [project.optional-dependencies]

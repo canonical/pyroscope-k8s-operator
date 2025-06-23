@@ -13,7 +13,8 @@ dev = [
     "pytest-jubilant>=0.2.1",
     "minio",
     "requests",
-    "coordinated-workers",
+    # FIXME: use pinned coordinated-workers
+    "coordinated-workers@git+https://github.com/canonical/cos-coordinated-workers@tls-v4",
     "tenacity",
 ]
 
