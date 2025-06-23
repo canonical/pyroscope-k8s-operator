@@ -49,13 +49,15 @@ class Pyroscope:
         )
 
     def _build_server_config(self, tls=False):
-        server_config = pyroscope_config.Server(http_listen_port=self.http_server_port)
-        if tls:
-            server_config.http_tls_config = pyroscope_config.TLSConfig(
-                                                    cert_file=self.tls_cert_path,
-                                                    key_file=self.tls_key_path,
-                                                    client_ca_file=self.tls_ca_path
-                                                    )
+        tls_config = pyroscope_config.TLSConfig(
+                        cert_file=self.tls_cert_path,
+                        key_file=self.tls_key_path,
+                        client_ca_file=self.tls_ca_path
+                    ) if tls else None
+        server_config = pyroscope_config.Server(
+                http_listen_port=self.http_server_port,
+                http_tls_config=tls_config,
+                )
         return server_config
 
 
@@ -89,19 +91,17 @@ class Pyroscope:
         )
 
     def _build_memberlist_config(self, worker_peers: Optional[Tuple[str, ...]], tls = False):
+        tls_config = {
+                "tls_cert_path": self.tls_cert_path,
+                "tls_key_path": self.tls_key_path,
+                "tls_ca_path": self.tls_ca_path,
+                } if tls else {}
         memberlist_config = pyroscope_config.Memberlist(
             bind_port=self.memberlist_port,
-            join_members=(
-                [f"{peer}:{self.memberlist_port}" for peer in worker_peers]
-                if worker_peers
-                else []
-            ),
+            join_members=([f"{peer}:{self.memberlist_port}" for peer in worker_peers] if worker_peers else []),
+            tls_enabled=tls,
+            **tls_config,
         )
-        if tls:
-            memberlist_config.tls_enabled = True
-            memberlist_config.tls_cert_path = self.tls_cert_path
-            memberlist_config.tls_key_path = self.tls_key_path
-            memberlist_config.tls_ca_path = self.tls_ca_path
         return memberlist_config
 
     def _build_storage_config(self, s3_config: dict):
@@ -141,10 +141,13 @@ class Pyroscope:
         return urlparse(external_url).path
     
     def _build_grpc_client_config(self, tls=False):
-        client_config = pyroscope_config.GrpcClient()
-        if tls:
-            client_config.tls_enabled = True
-            client_config.tls_cert_path = self.tls_cert_path
-            client_config.tls_key_path = self.tls_key_path
-            client_config.tls_ca_path = self.tls_ca_path
+        tls_config = {
+                "tls_cert_path": self.tls_cert_path,
+                "tls_key_path": self.tls_key_path,
+                "tls_ca_path": self.tls_ca_path,
+                } if tls else {}
+        client_config = pyroscope_config.GrpcClient(
+            tls_enabled=tls,
+            **tls_config,
+        )
         return client_config
