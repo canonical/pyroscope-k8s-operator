@@ -8,6 +8,7 @@ import logging
 import socket
 from typing import Optional, Set, Tuple
 from urllib.parse import urlparse
+from charms.catalogue_k8s.v1.catalogue import CatalogueItem
 
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from coordinated_workers.coordinator import Coordinator
@@ -64,6 +65,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
             ),
             workers_config=self.pyroscope.config,
             worker_ports=self._get_worker_ports,
+            catalogue_item=self._catalogue_item,
             # FIXME: add the rest of the optional config
             # resources_requests, resources_limit_options, container_name
             # catalogue_item, workload_tracing_protocols
@@ -150,6 +152,19 @@ class PyroscopeCoordinatorCharm(CharmBase):
             and self._nginx_container.exists(CA_CERT_PATH)
         )
     
+    @property
+    def _catalogue_item(self) -> CatalogueItem:
+        """A catalogue application entry for this Pyroscope instance."""
+        return CatalogueItem(
+            # use app name in case there are multiple Pyroscope apps deployed.
+            name=self.app.name,
+            icon="flame",
+            url=self._most_external_url,
+            description=(
+                "Grafana Pyroscope is a distributed continuous profiling backend by Grafana Labs."
+            ),
+        )
+
     ##################
     # EVENT HANDLERS #
     ##################

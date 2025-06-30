@@ -100,7 +100,9 @@ def test_self_monitoring_metrics_ingestion(juju: Juju):
 
 
 # @retry(stop=stop_after_attempt(30), wait=wait_fixed(5))
-@pytest.mark.xfail(reason="https://github.com/canonical/pyroscope-k8s-operator/issues/147")
+@pytest.mark.xfail(
+    reason="https://github.com/canonical/pyroscope-k8s-operator/issues/147"
+)
 def test_self_monitoring_charm_traces_ingestion(juju: Juju):
     # GIVEN a pyroscope cluster integrated with tempo over charm-tracing
     address = get_unit_ip_address(juju, TEMPO_APP, 0)
