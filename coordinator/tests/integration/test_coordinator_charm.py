@@ -1,4 +1,3 @@
-
 import logging
 import pytest
 from jubilant import Juju, all_blocked
@@ -6,6 +5,7 @@ from pathlib import Path
 from helpers import PYROSCOPE_APP, PYROSCOPE_RESOURCES
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.setup
 def test_deploy_pyroscope(juju: Juju, coordinator_charm: Path):

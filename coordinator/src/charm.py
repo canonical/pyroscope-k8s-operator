@@ -21,6 +21,7 @@ from pyroscope_config import PYROSCOPE_ROLES_CONFIG
 
 logger = logging.getLogger(__name__)
 
+
 class PyroscopeCoordinatorCharm(CharmBase):
     """Charmed Operator for Pyroscope; a distributed profiling backend."""
 
@@ -59,7 +60,9 @@ class PyroscopeCoordinatorCharm(CharmBase):
             nginx_config=NginxConfig(
                 server_name=self.hostname,
                 upstream_configs=nginx_config.upstreams(Pyroscope.http_server_port),
-                server_ports_to_locations=nginx_config.server_ports_to_locations(tls_available=self._are_certificates_on_disk),
+                server_ports_to_locations=nginx_config.server_ports_to_locations(
+                    tls_available=self._are_certificates_on_disk
+                ),
                 enable_status_page=True,
             ),
             workers_config=self.pyroscope.config,
@@ -76,7 +79,6 @@ class PyroscopeCoordinatorCharm(CharmBase):
         # === EVENT HANDLER REGISTRATION === #
         ######################################
 
-
     ######################
     # UTILITY PROPERTIES #
     ######################
@@ -88,30 +90,30 @@ class PyroscopeCoordinatorCharm(CharmBase):
     @property
     def service_hostname(self) -> str:
         """The FQDN of the k8s service associated with this application.
-        
+
         This service load balances traffic across all application units.
-        Falls back to this unit's DNS name if the hostname does not resolve to a Kubernetes-style fqdn. 
+        Falls back to this unit's DNS name if the hostname does not resolve to a Kubernetes-style fqdn.
         """
         # example: 'pyroscope-0.pyroscope-headless.default.svc.cluster.local'
         hostname = self.hostname
-        hostname_parts = hostname.split(".") 
-        # 'svc' is always there in a K8s service fqdn 
+        hostname_parts = hostname.split(".")
+        # 'svc' is always there in a K8s service fqdn
         # ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#services
         if "svc" not in hostname_parts:
             logger.debug(f"expected K8s-style fqdn, but got {hostname} instead")
             return hostname
-        
-        dns_name_parts = hostname_parts[hostname_parts.index("svc"):]
-        dns_name = '.'.join(dns_name_parts) # 'svc.cluster.local'
-        return f"{self.app.name}.{self.model.name}.{dns_name}" # 'pyroscope.model.svc.cluster.local'
-    
+
+        dns_name_parts = hostname_parts[hostname_parts.index("svc") :]
+        dns_name = ".".join(dns_name_parts)  # 'svc.cluster.local'
+        return f"{self.app.name}.{self.model.name}.{dns_name}"  # 'pyroscope.model.svc.cluster.local'
+
     @property
     def _scheme(self) -> str:
         """Return the URI scheme that should be used when communicating with this unit."""
         scheme = "http"
         # FIXME: add a check for are_certificates_on_disk
         return scheme
-    
+
     @property
     def _internal_url(self) -> str:
         """Return the locally addressable, FQDN based service address."""
@@ -126,7 +128,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
         except ModelError as e:
             logger.error("Failed obtaining external url: %s.", e)
         return None
-    
+
     @property
     def _most_external_url(self) -> str:
         """Return the most external url known about by this charm.
@@ -149,7 +151,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
             and self._nginx_container.exists(KEY_PATH)
             and self._nginx_container.exists(CA_CERT_PATH)
         )
-    
+
     ##################
     # EVENT HANDLERS #
     ##################
@@ -165,9 +167,9 @@ class PyroscopeCoordinatorCharm(CharmBase):
         # we need to 'remember' to run this logic as soon as we become ready, which is hard and error-prone
         pass
 
-    def _get_worker_ports(self,  role: str) -> Tuple[int, ...]:
+    def _get_worker_ports(self, role: str) -> Tuple[int, ...]:
         """Determine, from the role of a worker, which ports it should open."""
-        ports:Set[int]= {
+        ports: Set[int] = {
             Pyroscope.memberlist_port,
             # we need http_server_port because the metrics server runs on it.
             Pyroscope.http_server_port,

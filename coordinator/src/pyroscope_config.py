@@ -8,6 +8,7 @@ from typing import List, Optional
 from coordinated_workers.coordinator import ClusterRolesConfig
 from pydantic import BaseModel, Field
 
+
 @unique
 class PyroscopeRole(StrEnum):
     """Pyroscope component role names.
@@ -18,6 +19,7 @@ class PyroscopeRole(StrEnum):
      config:
       -> https://grafana.com/docs/pyroscope/latest/configure-server/
     """
+
     # FIXME: add other optional modules
     # https://github.com/canonical/pyroscope-k8s-operator/issues/4
     all = "all"  # default, meta-role.
@@ -40,6 +42,7 @@ class PyroscopeRole(StrEnum):
             PyroscopeRole.compactor,
             PyroscopeRole.store_gateway,
         }
+
 
 META_ROLES = {
     "all": set(PyroscopeRole.all_nonmeta()),
@@ -80,84 +83,112 @@ PYROSCOPE_ROLES_CONFIG = ClusterRolesConfig(
 )
 # Define the configuration for Pyroscope roles.
 
+
 class Kvstore(BaseModel):
     """Kvstore schema."""
 
     store: str = "memberlist"
+
 
 class Ring(BaseModel):
     """Ring schema."""
 
     kvstore: Kvstore
     replication_factor: Optional[int] = None
-    
+
 
 class Lifecycler(BaseModel):
     """Lifecycler schema."""
+
     ring: Ring
+
 
 class ShardingRing(BaseModel):
     """ShardingRing schema."""
+
     replication_factor: int
+
 
 class ShardingRingCompactor(BaseModel):
     """Compactor ShardingRing schema."""
+
     kvstore: Kvstore
+
 
 class Api(BaseModel):
     """Api schema."""
-    base_url: Optional[str] = Field(alias='base-url', default=None) # this is the only field with dash in the entire config
 
-    model_config = {
-        'populate_by_name': True
-    }
+    base_url: Optional[str] = Field(
+        alias="base-url", default=None
+    )  # this is the only field with dash in the entire config
+
+    model_config = {"populate_by_name": True}
+
 
 class Server(BaseModel):
     """Server schema."""
+
     http_listen_port: int
 
 
 class Ingester(BaseModel):
     """Ingester schema."""
+
     lifecycler: Lifecycler
+
 
 class StoreGateway(BaseModel):
     """StoreGateway schema."""
+
     sharding_ring: ShardingRing
+
 
 class Memberlist(BaseModel):
     """Memberlist schema."""
+
     bind_port: int
     join_members: List[str]
 
+
 class S3Storage(BaseModel):
     """S3 Storage schema"""
+
     bucket_name: str
     endpoint: str
     access_key_id: str
     secret_access_key: str
     region: Optional[str] = None
-    insecure: bool = False 
+    insecure: bool = False
+
 
 class Storage(BaseModel):
     """Storage schema"""
+
     backend: str
     s3: S3Storage
 
+
 class Distributor(BaseModel):
     """Distributor schema."""
+
     ring: Ring
+
 
 class Compactor(BaseModel):
     """Distributor schema."""
+
     sharding_ring: ShardingRingCompactor
+
 
 class DB(BaseModel):
     """Pyroscope DB schema."""
+
     data_path: str
+
 
 class PyroscopeConfig(BaseModel):
     """PyroscopeConfig config schema."""
+
     api: Api
     server: Server
     distributor: Distributor

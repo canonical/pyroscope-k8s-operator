@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 
 dependencies = [
     "ops[tracing]",
-    "coordinated-workers>=1.0.1",
+    "coordinated-workers>=2.0.0",
     "pydantic<3",
 ]
 
@@ -21,11 +21,12 @@ dev = [
 
 #   INTEGRATION TESTS
     "jubilant",
-    "pytest-jubilant>=0.2.1",
+    "pytest-jubilant>=0.6",
 
 #   LINTING
     "pyright",
     "ruff",
+
 #   INTERFACE TESTS
     "pytest-interface-tester==3.3.1",
 ]

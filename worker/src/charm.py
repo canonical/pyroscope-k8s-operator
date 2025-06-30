@@ -20,6 +20,8 @@ class PyroscopeWorkerCharm(CharmBase):
         super().__init__(*args)
         self.worker = PyroscopeWorker(self)
 
+
 if __name__ == "__main__":  # pragma: nocover
     from ops import main
+
     main(PyroscopeWorkerCharm)  # noqa

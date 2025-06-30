@@ -10,14 +10,15 @@ from urllib.parse import urlparse
 import yaml
 import pyroscope_config
 
+
 class Pyroscope:
     """Class representing the Pyroscope client workload configuration."""
+
     _data_path = "/pyroscope-data"
     # this is the single source of truth for which ports are opened and configured
     # in the distributed Pyroscope deployment
     memberlist_port = 7946
     http_server_port = 4040
-          
 
     def config(
         self,
@@ -29,7 +30,7 @@ class Pyroscope:
         external_url = coordinator._external_url
         config = pyroscope_config.PyroscopeConfig(
             api=self._build_api_config(external_url),
-            server= self._build_server_config(),
+            server=self._build_server_config(),
             distributor=self._build_distributor_config(),
             ingester=self._build_ingester_config(addrs_by_role),
             store_gateway=self._build_store_gateway_config(addrs_by_role),
@@ -38,7 +39,9 @@ class Pyroscope:
             compactor=self._build_compactor_config(),
             pyroscopedb=self._build_pyroscope_db(),
         )
-        return yaml.dump(config.model_dump(mode="json", by_alias=True, exclude_none=True))
+        return yaml.dump(
+            config.model_dump(mode="json", by_alias=True, exclude_none=True)
+        )
 
     def _build_server_config(self):
         return pyroscope_config.Server(
@@ -46,58 +49,67 @@ class Pyroscope:
         )
 
     def _build_ingester_config(self, roles_addresses: Dict[str, Set[str]]):
-        ingester_addresses = roles_addresses.get(pyroscope_config.PyroscopeRole.ingester)
+        ingester_addresses = roles_addresses.get(
+            pyroscope_config.PyroscopeRole.ingester
+        )
         return pyroscope_config.Ingester(
             lifecycler=pyroscope_config.Lifecycler(
                 ring=pyroscope_config.Ring(
-                    replication_factor= 3 if ingester_addresses and len(ingester_addresses) >= 3 else 1,
+                    replication_factor=3
+                    if ingester_addresses and len(ingester_addresses) >= 3
+                    else 1,
                     kvstore=pyroscope_config.Kvstore(
                         store="memberlist",
-                    )
+                    ),
                 )
             )
         )
-    
+
     def _build_store_gateway_config(self, roles_addresses: Dict[str, Set[str]]):
-        store_gw_addresses = roles_addresses.get(pyroscope_config.PyroscopeRole.store_gateway)
+        store_gw_addresses = roles_addresses.get(
+            pyroscope_config.PyroscopeRole.store_gateway
+        )
         return pyroscope_config.StoreGateway(
             sharding_ring=pyroscope_config.ShardingRing(
-                replication_factor= 3 if store_gw_addresses and len(store_gw_addresses) >= 3 else 1,
+                replication_factor=3
+                if store_gw_addresses and len(store_gw_addresses) >= 3
+                else 1,
             )
         )
 
     def _build_memberlist_config(self, worker_peers: Optional[Tuple[str, ...]]):
         return pyroscope_config.Memberlist(
             bind_port=self.memberlist_port,
-            join_members=([f"{peer}:{self.memberlist_port}" for peer in worker_peers] if worker_peers else []),
+            join_members=(
+                [f"{peer}:{self.memberlist_port}" for peer in worker_peers]
+                if worker_peers
+                else []
+            ),
         )
 
     def _build_storage_config(self, s3_config: dict):
         return pyroscope_config.Storage(
-            backend="s3",
-            s3 = pyroscope_config.S3Storage(**s3_config)
+            backend="s3", s3=pyroscope_config.S3Storage(**s3_config)
         )
 
     def _build_compactor_config(self):
         return pyroscope_config.Compactor(
             sharding_ring=pyroscope_config.ShardingRingCompactor(
-                kvstore=pyroscope_config.Kvstore(
-                    store="memberlist"
-                )
+                kvstore=pyroscope_config.Kvstore(store="memberlist")
             )
         )
 
     def _build_pyroscope_db(self):
         return pyroscope_config.DB(data_path=self._data_path)
-    
+
     def _build_distributor_config(self):
         return pyroscope_config.Distributor(
             ring=pyroscope_config.Ring(
                 kvstore=pyroscope_config.Kvstore(
-                        store="memberlist",
-                    )
+                    store="memberlist",
                 )
             )
+        )
 
     def _build_api_config(self, external_url):
         if external_url:
@@ -105,7 +117,7 @@ class Pyroscope:
             if base_url == "" or base_url == "/":
                 # we're behind ingress, but on a root path
                 return pyroscope_config.Api()
-            return pyroscope_config.Api(base_url=base_url) # pyright: ignore[reportCallIssue]
+            return pyroscope_config.Api(base_url=base_url)  # pyright: ignore[reportCallIssue]
         return pyroscope_config.Api()
 
     def _base_url(self, external_url):

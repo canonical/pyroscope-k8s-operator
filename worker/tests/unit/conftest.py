@@ -11,6 +11,7 @@ PYROSCOPE_VERSION_EXEC_OUTPUT = Exec(
     command_prefix=("/usr/bin/pyroscope", "-version"), stdout="1.13.4"
 )
 
+
 @contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
     if url == f"{'https' if tls else 'http'}://{socket.getfqdn()}:4040/ready":
@@ -25,6 +26,7 @@ def _urlopen_patch(url: str, resp, tls: bool = False):
 def ctx():
     return Context(charm_type=PyroscopeWorkerCharm)
 
+
 @pytest.fixture
 def pyroscope_container():
     return Container(
@@ -33,7 +35,7 @@ def pyroscope_container():
         execs={
             PYROSCOPE_VERSION_EXEC_OUTPUT,
         },
-)
+    )
 
 
 @contextmanager

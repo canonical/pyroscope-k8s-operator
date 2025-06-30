@@ -7,22 +7,26 @@ import yaml
 from charm import PyroscopeCoordinatorCharm
 from ops.testing import State
 
+
 def get_worker_unit_data(unit_no):
     return {
-                "address": json.dumps(f"worker-{unit_no}.test.svc.cluster.local"),
-                "juju_topology": json.dumps(
-                    {
-                        "model": "test",
-                        "unit": f"worker/{unit_no}",
-                        "model_uuid": "1",
-                        "application": "worker",
-                        "charm_name": "PyroscopeWorker",
-                    }
-                ),
+        "address": json.dumps(f"worker-{unit_no}.test.svc.cluster.local"),
+        "juju_topology": json.dumps(
+            {
+                "model": "test",
+                "unit": f"worker/{unit_no}",
+                "model_uuid": "1",
+                "application": "worker",
+                "charm_name": "PyroscopeWorker",
             }
+        ),
+    }
+
 
 @pytest.fixture
-def state_with_s3_and_workers(all_worker, s3, nginx_container, nginx_prometheus_exporter_container):
+def state_with_s3_and_workers(
+    all_worker, s3, nginx_container, nginx_prometheus_exporter_container
+):
     state = State(
         leader=True,
         relations=[all_worker, s3],
@@ -30,8 +34,15 @@ def state_with_s3_and_workers(all_worker, s3, nginx_container, nginx_prometheus_
     )
     return state
 
+
 @pytest.fixture
-def state_with_ingress_subdomain(all_worker, s3, nginx_container, nginx_prometheus_exporter_container, ingress_subdomain):
+def state_with_ingress_subdomain(
+    all_worker,
+    s3,
+    nginx_container,
+    nginx_prometheus_exporter_container,
+    ingress_subdomain,
+):
     state = State(
         leader=True,
         relations=[all_worker, s3, ingress_subdomain],
@@ -39,8 +50,15 @@ def state_with_ingress_subdomain(all_worker, s3, nginx_container, nginx_promethe
     )
     return state
 
+
 @pytest.fixture
-def state_with_ingress_subpath(all_worker, s3, nginx_container, nginx_prometheus_exporter_container, ingress_subpath):
+def state_with_ingress_subpath(
+    all_worker,
+    s3,
+    nginx_container,
+    nginx_prometheus_exporter_container,
+    ingress_subpath,
+):
     state = State(
         leader=True,
         relations=[all_worker, s3, ingress_subpath],
@@ -48,17 +66,20 @@ def state_with_ingress_subpath(all_worker, s3, nginx_container, nginx_prometheus
     )
     return state
 
-@pytest.mark.parametrize("workers_no", (1,3))
-def test_memberlist_config(workers_no, context, state_with_s3_and_workers, all_worker, s3):
+
+@pytest.mark.parametrize("workers_no", (1, 3))
+def test_memberlist_config(
+    workers_no, context, state_with_s3_and_workers, all_worker, s3
+):
     # GIVEN an s3 relation and a worker relation that has n units
     workers = replace(
         all_worker,
         remote_units_data={
             worker_idx: get_worker_unit_data(worker_idx)
             for worker_idx in range(workers_no)
-        }
+        },
     )
-    state = replace(state_with_s3_and_workers, relations={workers,s3})
+    state = replace(state_with_s3_and_workers, relations={workers, s3})
 
     # WHEN an event is fired
     with context(context.on.relation_changed(workers), state) as mgr:
@@ -67,12 +88,16 @@ def test_memberlist_config(workers_no, context, state_with_s3_and_workers, all_w
         actual_config_dict = yaml.safe_load(actual_config)
         expected_memberlist_config = {
             "bind_port": 7946,
-            "join_members": [f"worker-{worker_idx}.test.svc.cluster.local:7946" for worker_idx in range(workers_no)]
+            "join_members": [
+                f"worker-{worker_idx}.test.svc.cluster.local:7946"
+                for worker_idx in range(workers_no)
+            ],
         }
         # THEN memberlist config portion is generated
         assert "memberlist" in actual_config_dict
         # AND this config contains all worker units as members
         assert actual_config_dict["memberlist"] == expected_memberlist_config
+
 
 def test_server_config(context, state_with_s3_and_workers):
     # GIVEN an s3 relation and a worker relation
@@ -90,8 +115,10 @@ def test_server_config(context, state_with_s3_and_workers):
         assert actual_config_dict["server"] == expected_config
 
 
-@pytest.mark.parametrize("workers_no", (1,3))
-def test_ingester_config(workers_no, context, state_with_s3_and_workers, all_worker, s3):
+@pytest.mark.parametrize("workers_no", (1, 3))
+def test_ingester_config(
+    workers_no, context, state_with_s3_and_workers, all_worker, s3
+):
     # GIVEN an s3 relation and an ingester worker relation that has n units
     ingester_workers = replace(
         all_worker,
@@ -99,9 +126,9 @@ def test_ingester_config(workers_no, context, state_with_s3_and_workers, all_wor
         remote_units_data={
             worker_idx: get_worker_unit_data(worker_idx)
             for worker_idx in range(workers_no)
-        }
+        },
     )
-    state = replace(state_with_s3_and_workers, relations={ingester_workers,s3})
+    state = replace(state_with_s3_and_workers, relations={ingester_workers, s3})
     # WHEN an event is fired
     with context(context.on.relation_changed(ingester_workers), state) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
@@ -111,9 +138,7 @@ def test_ingester_config(workers_no, context, state_with_s3_and_workers, all_wor
             "lifecycler": {
                 "ring": {
                     "replication_factor": 3 if workers_no > 1 else 1,
-                    "kvstore": {
-                        "store": "memberlist"
-                    }
+                    "kvstore": {"store": "memberlist"},
                 }
             }
         }
@@ -122,8 +147,11 @@ def test_ingester_config(workers_no, context, state_with_s3_and_workers, all_wor
         # AND this config has memberlist store and a replication factor dependant on the no of ingester workers
         assert actual_config_dict["ingester"] == expected_config
 
-@pytest.mark.parametrize("workers_no", (1,3))
-def test_store_gateway_config(workers_no, context, state_with_s3_and_workers, all_worker, s3):
+
+@pytest.mark.parametrize("workers_no", (1, 3))
+def test_store_gateway_config(
+    workers_no, context, state_with_s3_and_workers, all_worker, s3
+):
     # GIVEN an s3 relation and a store-gateway worker relation that has n units
     store_gw_workers = replace(
         all_worker,
@@ -131,9 +159,9 @@ def test_store_gateway_config(workers_no, context, state_with_s3_and_workers, al
         remote_units_data={
             worker_idx: get_worker_unit_data(worker_idx)
             for worker_idx in range(workers_no)
-        }
+        },
     )
-    state = replace(state_with_s3_and_workers, relations={store_gw_workers,s3})
+    state = replace(state_with_s3_and_workers, relations={store_gw_workers, s3})
     # WHEN an event is fired
     with context(context.on.relation_changed(store_gw_workers), state) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
@@ -148,6 +176,7 @@ def test_store_gateway_config(workers_no, context, state_with_s3_and_workers, al
         assert "store_gateway" in actual_config_dict
         # AND this config has a replication factor dependant on the no of store-gateway workers
         assert actual_config_dict["store_gateway"] == expected_config
+
 
 def test_s3_storage_config(context, state_with_s3_and_workers):
     # GIVEN an s3 relation and a worker relation
@@ -164,12 +193,13 @@ def test_s3_storage_config(context, state_with_s3_and_workers):
                 "endpoint": "1.2.3.4:9000",
                 "secret_access_key": "soverysecret",
                 "insecure": True,
-            }
+            },
         }
         # THEN storage config portion is generated
         assert "storage" in actual_config_dict
         # AND this config contains the s3 config as upstream defines it
         assert actual_config_dict["storage"] == expected_config
+
 
 def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
     with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
@@ -182,7 +212,10 @@ def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
         # AND this config doesn't contain the base-url
         assert actual_config_dict["api"] == expected_config
 
-def test_base_url_config_with_ingress_on_subdomain(context, state_with_ingress_subdomain):
+
+def test_base_url_config_with_ingress_on_subdomain(
+    context, state_with_ingress_subdomain
+):
     with context(context.on.config_changed(), state_with_ingress_subdomain) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
         actual_config = charm.pyroscope.config(charm.coordinator)
@@ -193,14 +226,13 @@ def test_base_url_config_with_ingress_on_subdomain(context, state_with_ingress_s
         # AND this config doesn't contain the base-url
         assert actual_config_dict["api"] == expected_config
 
+
 def test_base_url_config_with_ingress_on_subpath(context, state_with_ingress_subpath):
     with context(context.on.config_changed(), state_with_ingress_subpath) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
         actual_config = charm.pyroscope.config(charm.coordinator)
         actual_config_dict = yaml.safe_load(actual_config)
-        expected_config = {
-            "base-url": "/model-pyroscope-k8s"
-        }
+        expected_config = {"base-url": "/model-pyroscope-k8s"}
         # THEN api config portion is generated
         assert "api" in actual_config_dict
         # AND this config contains the base-url used by pyroscope-UI to point at the right endpoints

@@ -10,10 +10,10 @@ requires-python = ">=3.12"
 dev = [
     #INTEGRATION TESTS
     "jubilant",
-    "pytest-jubilant>=0.2.1",
+    "pytest-jubilant>=0.6",
     "minio",
     "requests",
-    "coordinated-workers",
+    "coordinated-workers>=2.0.0",
     "tenacity",
 ]
 

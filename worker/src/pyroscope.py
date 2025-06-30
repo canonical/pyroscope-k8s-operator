@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class PyroscopeWorker(Worker):
-     
     _name = "pyroscope"
 
     def __init__(self, charm: CharmBase):
@@ -40,13 +39,15 @@ class PyroscopeWorker(Worker):
         if not self._container.can_connect():
             return None
 
-        version_output, _ = self._container.exec(["/usr/bin/pyroscope", "-version"]).wait_output()
+        version_output, _ = self._container.exec(
+            ["/usr/bin/pyroscope", "-version"]
+        ).wait_output()
         # Output looks like this:
         # Pyroscope, version 1.13.4 (branch: HEAD, revision 32137ee)
         if result := re.search(r"[Vv]ersion:?\s*(\S+)", version_output):
             return result.group(1)
         return None
-    
+
     @staticmethod
     def layer(worker: Worker) -> Layer:
         """Return the Pebble layer for the Worker.

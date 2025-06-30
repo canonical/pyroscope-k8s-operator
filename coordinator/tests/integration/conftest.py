@@ -5,6 +5,7 @@ from tests.integration.helpers import get_coordinator_charm
 
 logger = logging.getLogger(__name__)
 
+
 @fixture(scope="session")
 def coordinator_charm():
     """Pyroscope coordinator charm used for integration testing.

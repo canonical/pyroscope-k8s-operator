@@ -9,7 +9,8 @@ from pytest_jubilant import pack_charm
 METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
 PYROSCOPE_WORKER_APP = "pyroscope-worker"
 PYROSCOPE_RESOURCES = {
-    image_name: image_meta["upstream-source"] for image_name, image_meta in METADATA["resources"].items()
+    image_name: image_meta["upstream-source"]
+    for image_name, image_meta in METADATA["resources"].items()
 }
 
 

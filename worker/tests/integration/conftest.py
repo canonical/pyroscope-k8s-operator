@@ -5,6 +5,7 @@ from tests.integration.helpers import get_worker_charm
 
 logger = logging.getLogger(__name__)
 
+
 @fixture(scope="session")
 def worker_charm():
     """Pyroscope worker charm used for integration testing.

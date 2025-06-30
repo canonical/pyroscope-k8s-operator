@@ -36,7 +36,7 @@ def test_pebble_ready_plan(ctx, pyroscope_container, roles):
             "ready": {
                 "http": {"url": f"http://{host}:4040/ready"},
                 "override": "replace",
-                "threshold": 3
+                "threshold": 3,
             }
         },
         "services": {
@@ -50,32 +50,29 @@ def test_pebble_ready_plan(ctx, pyroscope_container, roles):
     }
 
     # GIVEN a pyroscope-cluster with a placeholder worker config
-    state =set_roles(
-            State(
-                containers=[pyroscope_container],
-                relations=[
-                    Relation(
-                        "pyroscope-cluster",
-                        remote_app_data={
-                            "worker_config": json.dumps("beef"),
-                        },
-                    )
-                ],
-            ),
-            roles,
-        )
-    # WHEN a workload pebble ready event is fired
-    state_out = ctx.run(
-        ctx.on.pebble_ready(pyroscope_container),
-        state= state
+    state = set_roles(
+        State(
+            containers=[pyroscope_container],
+            relations=[
+                Relation(
+                    "pyroscope-cluster",
+                    remote_app_data={
+                        "worker_config": json.dumps("beef"),
+                    },
+                )
+            ],
+        ),
+        roles,
     )
+    # WHEN a workload pebble ready event is fired
+    state_out = ctx.run(ctx.on.pebble_ready(pyroscope_container), state=state)
 
     # THEN pyroscope pebble plan is generated
     pyroscope_container_out = state_out.get_container(pyroscope_container.name)
     assert pyroscope_container_out.plan.to_dict() == expected_plan
     # AND the pebble service is running
     assert pyroscope_container_out.services.get("pyroscope").is_running() is True
-    
+
     # AND the charm status is active
     if roles == ["all"]:
         assert state_out.unit_status == ActiveStatus("(all roles) ready.")
