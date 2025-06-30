@@ -64,9 +64,10 @@ class PyroscopeCoordinatorCharm(CharmBase):
             ),
             workers_config=self.pyroscope.config,
             worker_ports=self._get_worker_ports,
+            workload_tracing_protocols=["jaeger_thrift_http"],
             # FIXME: add the rest of the optional config
             # resources_requests, resources_limit_options, container_name
-            # catalogue_item, workload_tracing_protocols
+            # catalogue_item
         )
 
         # do this regardless of what event we are processing

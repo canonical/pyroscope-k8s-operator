@@ -35,6 +35,8 @@ SELF_MONITORING_STACK = (
     TEMPO_S3_APP,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @pytest.mark.setup
 def test_deploy_self_monitoring_stack(juju: Juju):
@@ -70,6 +72,7 @@ def test_deploy_self_monitoring_stack(juju: Juju):
     )
     juju.integrate(PYROSCOPE_APP + ":logging", LOKI_APP + ":logging")
     juju.integrate(PYROSCOPE_APP + ":charm-tracing", TEMPO_APP + ":tracing")
+    juju.integrate(PYROSCOPE_APP + ":workload-tracing", TEMPO_APP + ":tracing")
 
     # THEN the pyroscope cluster and the self-monitoring stack get to active/idle
     juju.wait(
@@ -99,8 +102,7 @@ def test_self_monitoring_metrics_ingestion(juju: Juju):
             assert False, f"Request to Prometheus failed for app '{app}': {e}"
 
 
-# @retry(stop=stop_after_attempt(30), wait=wait_fixed(5))
-@pytest.mark.xfail(reason="https://github.com/canonical/pyroscope-k8s-operator/issues/147")
+@retry(stop=stop_after_attempt(30), wait=wait_fixed(5))
 def test_self_monitoring_charm_traces_ingestion(juju: Juju):
     # GIVEN a pyroscope cluster integrated with tempo over charm-tracing
     address = get_unit_ip_address(juju, TEMPO_APP, 0)
