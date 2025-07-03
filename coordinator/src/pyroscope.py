@@ -26,7 +26,6 @@ class Pyroscope:
 
     def __init__(self, app_hostname: str):
         self._app_hostname = app_hostname
-          
 
     def config(
         self,
@@ -38,11 +37,15 @@ class Pyroscope:
         external_url = coordinator._external_url
         config = pyroscope_config.PyroscopeConfig(
             api=self._build_api_config(external_url),
-            server= self._build_server_config(coordinator.tls_available),
+            server=self._build_server_config(coordinator.tls_available),
             distributor=self._build_distributor_config(),
             frontend=self._build_frontend_config(coordinator.tls_available),
-            frontend_worker=self._build_frontend_worker_config(coordinator.tls_available),
-            query_scheduler=self._build_query_scheduler_config(coordinator.tls_available),
+            frontend_worker=self._build_frontend_worker_config(
+                coordinator.tls_available
+            ),
+            query_scheduler=self._build_query_scheduler_config(
+                coordinator.tls_available
+            ),
             ingester=self._build_ingester_config(addrs_by_role),
             store_gateway=self._build_store_gateway_config(addrs_by_role),
             memberlist=self._build_memberlist_config(addrs, coordinator.tls_available),
@@ -55,16 +58,19 @@ class Pyroscope:
         )
 
     def _build_server_config(self, tls=False):
-        tls_config = pyroscope_config.TLSConfig(
-                        cert_file=self.tls_cert_path,
-                        key_file=self.tls_key_path,
-                    ) if tls else None
+        tls_config = (
+            pyroscope_config.TLSConfig(
+                cert_file=self.tls_cert_path,
+                key_file=self.tls_key_path,
+            )
+            if tls
+            else None
+        )
         server_config = pyroscope_config.Server(
-                http_listen_port=self.http_server_port,
-                http_tls_config=tls_config,
-                )
+            http_listen_port=self.http_server_port,
+            http_tls_config=tls_config,
+        )
         return server_config
-
 
     def _build_ingester_config(self, roles_addresses: Dict[str, Set[str]]):
         ingester_addresses = roles_addresses.get(
@@ -95,15 +101,25 @@ class Pyroscope:
             )
         )
 
-    def _build_memberlist_config(self, worker_peers: Optional[Tuple[str, ...]], tls = False):
-        tls_config = {
+    def _build_memberlist_config(
+        self, worker_peers: Optional[Tuple[str, ...]], tls=False
+    ):
+        tls_config = (
+            {
                 "tls_cert_path": self.tls_cert_path,
                 "tls_key_path": self.tls_key_path,
                 "tls_ca_path": self.tls_ca_path,
-                } if tls else {}
+            }
+            if tls
+            else {}
+        )
         memberlist_config = pyroscope_config.Memberlist(
             bind_port=self.memberlist_port,
-            join_members=([f"{peer}:{self.memberlist_port}" for peer in worker_peers] if worker_peers else []),
+            join_members=(
+                [f"{peer}:{self.memberlist_port}" for peer in worker_peers]
+                if worker_peers
+                else []
+            ),
             tls_enabled=tls,
             **tls_config,
         )
@@ -144,14 +160,18 @@ class Pyroscope:
 
     def _base_url(self, external_url):
         return urlparse(external_url).path
-    
+
     def _build_grpc_client_config(self, tls=False):
-        return pyroscope_config.GrpcClient(
-            tls_enabled=True,
-            tls_cert_path=self.tls_cert_path,
-            tls_key_path= self.tls_key_path,
-            tls_ca_path=self.tls_ca_path,
-        ) if tls else None
+        return (
+            pyroscope_config.GrpcClient(
+                tls_enabled=True,
+                tls_cert_path=self.tls_cert_path,
+                tls_key_path=self.tls_key_path,
+                tls_ca_path=self.tls_ca_path,
+            )
+            if tls
+            else None
+        )
 
     def _build_frontend_config(self, tls=False):
         frontend_config = pyroscope_config.Frontend(
@@ -160,7 +180,7 @@ class Pyroscope:
             instance_addr=self._app_hostname,
         )
         return frontend_config
-    
+
     def _build_frontend_worker_config(self, tls=False):
         frontend_worker_config = pyroscope_config.FrontendWorker(
             grpc_client_config=self._build_grpc_client_config(tls),

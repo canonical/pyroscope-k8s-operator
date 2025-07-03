@@ -68,9 +68,12 @@ def state_with_ingress_subpath(
     )
     return state
 
-@pytest.mark.parametrize("tls", (False,True))
-@pytest.mark.parametrize("workers_no", (1,3))
-def test_memberlist_config(workers_no, tls, context, state_with_s3_and_workers, all_worker, s3):
+
+@pytest.mark.parametrize("tls", (False, True))
+@pytest.mark.parametrize("workers_no", (1, 3))
+def test_memberlist_config(
+    workers_no, tls, context, state_with_s3_and_workers, all_worker, s3
+):
     # GIVEN an s3 relation and a worker relation that has n units
     workers = replace(
         all_worker,
@@ -89,16 +92,19 @@ def test_memberlist_config(workers_no, tls, context, state_with_s3_and_workers, 
             actual_config_dict = yaml.safe_load(actual_config)
             expected_memberlist_config = {
                 "bind_port": 7946,
-                "join_members": [f"worker-{worker_idx}.test.svc.cluster.local:7946" for worker_idx in range(workers_no)],
+                "join_members": [
+                    f"worker-{worker_idx}.test.svc.cluster.local:7946"
+                    for worker_idx in range(workers_no)
+                ],
                 "tls_enabled": tls,
-                 **(
-                {
-                    "tls_cert_path": Pyroscope.tls_cert_path,
-                    "tls_key_path": Pyroscope.tls_key_path,
-                    "tls_ca_path": Pyroscope.tls_ca_path,
-                }
-                if tls
-                else {}
+                **(
+                    {
+                        "tls_cert_path": Pyroscope.tls_cert_path,
+                        "tls_key_path": Pyroscope.tls_key_path,
+                        "tls_ca_path": Pyroscope.tls_ca_path,
+                    }
+                    if tls
+                    else {}
                 ),
             }
             # THEN memberlist config portion is generated
@@ -106,7 +112,8 @@ def test_memberlist_config(workers_no, tls, context, state_with_s3_and_workers, 
             # AND this config contains all worker units as members + tls config if enabled
             assert actual_config_dict["memberlist"] == expected_memberlist_config
 
-@pytest.mark.parametrize("tls", (False,True))
+
+@pytest.mark.parametrize("tls", (False, True))
 def test_server_config(context, state_with_s3_and_workers, tls):
     # GIVEN an s3 relation and a worker relation
     # WHEN an event is fired
@@ -214,8 +221,11 @@ def test_s3_storage_config(context, state_with_s3_and_workers):
         # AND this config contains the s3 config as upstream defines it
         assert actual_config_dict["storage"] == expected_config
 
-@pytest.mark.parametrize("component", ("frontend","frontend_worker", "query_scheduler"))
-@pytest.mark.parametrize("tls", (False,True))
+
+@pytest.mark.parametrize(
+    "component", ("frontend", "frontend_worker", "query_scheduler")
+)
+@pytest.mark.parametrize("tls", (False, True))
 def test_grpc_client_config(context, state_with_s3_and_workers, tls, component):
     # GIVEN an s3 relation and a worker relation
     # WHEN an event is fired
@@ -227,20 +237,24 @@ def test_grpc_client_config(context, state_with_s3_and_workers, tls, component):
             expected_config = {
                 "tls_enabled": tls,
                 **(
-                {
-                    "tls_cert_path": Pyroscope.tls_cert_path,
-                    "tls_key_path": Pyroscope.tls_key_path,
-                    "tls_ca_path": Pyroscope.tls_ca_path,
-                }
-                if tls
-                else {}
+                    {
+                        "tls_cert_path": Pyroscope.tls_cert_path,
+                        "tls_key_path": Pyroscope.tls_key_path,
+                        "tls_ca_path": Pyroscope.tls_ca_path,
+                    }
+                    if tls
+                    else {}
                 ),
             }
             # THEN `component` config portion is generated
             assert component in actual_config_dict
             # AND if TLS is enabled, this config contains the grpc_client TLS config
             if tls:
-                assert actual_config_dict[component]["grpc_client_config"] == expected_config
+                assert (
+                    actual_config_dict[component]["grpc_client_config"]
+                    == expected_config
+                )
+
 
 def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
     with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
