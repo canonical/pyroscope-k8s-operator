@@ -241,4 +241,3 @@ class PyroscopeConfig(BaseModel):
     storage: Storage
     compactor: Compactor
     pyroscopedb: DB
-    grpc_client: GrpcClient

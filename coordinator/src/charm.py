@@ -112,14 +112,12 @@ class PyroscopeCoordinatorCharm(CharmBase):
     @property
     def _scheme(self) -> str:
         """Return the URI scheme that should be used when communicating with this unit."""
-        scheme = "http"
-        # FIXME: add a check for are_certificates_on_disk
-        return scheme
+        return f"http{'s' if self._are_certificates_on_disk else ''}"
 
     @property
     def _internal_url(self) -> str:
         """Return the locally addressable, FQDN based service address."""
-        return f"{self._scheme}://{self.app_hostname}:8080"
+        return f"{self._scheme}://{self.app_hostname}:{self._nginx_port}"
 
     @property
     def _external_url(self) -> Optional[str]:
@@ -154,6 +152,15 @@ class PyroscopeCoordinatorCharm(CharmBase):
             and self._nginx_container.exists(CA_CERT_PATH)
         )
 
+    @property
+    def _nginx_port(self) -> int:
+        """The port that we should open on this pod."""
+        return (
+            nginx_config.nginx_tls_port
+            if self._are_certificates_on_disk
+            else nginx_config.nginx_port
+        )
+
     ##################
     # EVENT HANDLERS #
     ##################
@@ -167,7 +174,8 @@ class PyroscopeCoordinatorCharm(CharmBase):
         # regardless of the event we are processing.
         # reason is, if we miss these events because our coordinator cannot process events (inconsistent status),
         # we need to 'remember' to run this logic as soon as we become ready, which is hard and error-prone
-        pass
+        # open the necessary ports on this unit
+        self.unit.set_ports(self._nginx_port)
 
     def _get_worker_ports(self, role: str) -> Tuple[int, ...]:
         """Determine, from the role of a worker, which ports it should open."""

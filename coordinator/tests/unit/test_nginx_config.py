@@ -32,13 +32,13 @@ def test_servers_config(tls):
 
     # THEN the locations are mapped to the right port
     assert server_ports_to_locations[
-        nginx_config._nginx_tls_port if tls else nginx_config._nginx_port
+        nginx_config.nginx_tls_port if tls else nginx_config.nginx_port
     ]
 
     # AND THEN the other port isn't in the configuration
     assert (
         server_ports_to_locations.get(
-            nginx_config._nginx_port if tls else nginx_config._nginx_tls_port
+            nginx_config.nginx_port if tls else nginx_config.nginx_tls_port
         )
         is None
     )

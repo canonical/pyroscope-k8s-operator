@@ -15,8 +15,8 @@ from pyroscope_config import PyroscopeRole
 logger = logging.getLogger(__name__)
 
 
-_nginx_port = 8080
-_nginx_tls_port = 443
+nginx_port = 8080
+nginx_tls_port = 443
 
 _locations_write: List[NginxLocationConfig] = [
     NginxLocationConfig(path="/ingest", backend="distributor", modifier="="),
@@ -57,7 +57,7 @@ def server_ports_to_locations(
 ) -> Dict[int, List[NginxLocationConfig]]:
     """Generate a mapping from server ports to a list of Nginx location configurations."""
     return {
-        _nginx_tls_port if tls_available else _nginx_port: _locations_write
+        nginx_tls_port if tls_available else nginx_port: _locations_write
         + _locations_query_frontend
         + _locations_worker
     }
