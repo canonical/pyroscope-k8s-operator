@@ -84,6 +84,13 @@ PYROSCOPE_ROLES_CONFIG = ClusterRolesConfig(
 # Define the configuration for Pyroscope roles.
 
 
+class TLSConfig(BaseModel):
+    """TLS config schema."""
+
+    cert_file: str
+    key_file: str
+
+
 class Kvstore(BaseModel):
     """Kvstore schema."""
 
@@ -129,6 +136,7 @@ class Server(BaseModel):
     """Server schema."""
 
     http_listen_port: int
+    http_tls_config: Optional[TLSConfig] = None
 
 
 class Ingester(BaseModel):
@@ -148,6 +156,10 @@ class Memberlist(BaseModel):
 
     bind_port: int
     join_members: List[str]
+    tls_enabled: bool = False
+    tls_cert_path: Optional[str] = None
+    tls_key_path: Optional[str] = None
+    tls_ca_path: Optional[str] = None
 
 
 class S3Storage(BaseModel):
@@ -186,12 +198,43 @@ class DB(BaseModel):
     data_path: str
 
 
+class GrpcClient(BaseModel):
+    """GRPC client schema."""
+
+    tls_enabled: bool = False
+    tls_cert_path: Optional[str] = None
+    tls_key_path: Optional[str] = None
+    tls_ca_path: Optional[str] = None
+
+
+class Frontend(BaseModel):
+    """Query frontend schema."""
+
+    grpc_client_config: Optional[GrpcClient]
+    instance_addr: str
+
+
+class FrontendWorker(BaseModel):
+    """Frontend worker schema."""
+
+    grpc_client_config: Optional[GrpcClient]
+
+
+class QueryScheduler(BaseModel):
+    """Query scheduler schema."""
+
+    grpc_client_config: Optional[GrpcClient]
+
+
 class PyroscopeConfig(BaseModel):
     """PyroscopeConfig config schema."""
 
     api: Api
     server: Server
     distributor: Distributor
+    frontend: Frontend
+    frontend_worker: FrontendWorker
+    query_scheduler: QueryScheduler
     ingester: Ingester
     store_gateway: StoreGateway
     memberlist: Memberlist
