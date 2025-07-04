@@ -106,9 +106,11 @@ class Pyroscope:
     ):
         tls_config = (
             {
+                "tls_enabled": True,
+                "tls_ca_path": self.tls_ca_path,
                 "tls_cert_path": self.tls_cert_path,
                 "tls_key_path": self.tls_key_path,
-                "tls_ca_path": self.tls_ca_path,
+                "tls_server_name": self._app_hostname,
             }
             if tls
             else {}
@@ -120,7 +122,6 @@ class Pyroscope:
                 if worker_peers
                 else []
             ),
-            tls_enabled=tls,
             **tls_config,
         )
         return memberlist_config
@@ -168,6 +169,7 @@ class Pyroscope:
                 tls_cert_path=self.tls_cert_path,
                 tls_key_path=self.tls_key_path,
                 tls_ca_path=self.tls_ca_path,
+                tls_server_name=self._app_hostname,
             )
             if tls
             else None
@@ -176,8 +178,6 @@ class Pyroscope:
     def _build_frontend_config(self, tls=False):
         frontend_config = pyroscope_config.Frontend(
             grpc_client_config=self._build_grpc_client_config(tls),
-            # proxy to the coordinator, which will in turn, proxy to the query-frontend apps
-            instance_addr=self._app_hostname,
         )
         return frontend_config
 

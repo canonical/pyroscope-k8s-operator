@@ -26,7 +26,7 @@ resources:
     type: oci-image
     description: OCI image for Grafana Pyroscope
     # FIXME: use pyroscope rock
-    upstream-source: grafana/pyroscope:1.13.4
+    upstream-source: ubuntu/pyroscope:1.14-24.04_edge
 
 links:
   documentation: https://discourse.charmhub.io/t/18122
