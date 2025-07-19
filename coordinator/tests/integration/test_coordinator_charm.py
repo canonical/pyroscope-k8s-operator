@@ -1,8 +1,9 @@
 import logging
-import pytest
-from jubilant import Juju, all_blocked
 from pathlib import Path
+
+import pytest
 from helpers import PYROSCOPE_APP, PYROSCOPE_RESOURCES
+from jubilant import Juju, all_blocked
 
 logger = logging.getLogger(__name__)
 

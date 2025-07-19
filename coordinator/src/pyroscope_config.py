@@ -5,6 +5,7 @@
 
 from enum import StrEnum, unique
 from typing import List, Optional
+
 from coordinated_workers.coordinator import ClusterRolesConfig
 from pydantic import BaseModel, Field
 

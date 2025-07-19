@@ -1,11 +1,11 @@
 import json
-import pytest
 from dataclasses import replace
 
+import pytest
 import yaml
+from ops.testing import State
 
 from charm import PyroscopeCoordinatorCharm
-from ops.testing import State
 
 
 def get_worker_unit_data(unit_no):
@@ -25,43 +25,23 @@ def get_worker_unit_data(unit_no):
 
 @pytest.fixture
 def state_with_s3_and_workers(
-    all_worker, s3, nginx_container, nginx_prometheus_exporter_container
+    all_worker, s3, nginx_container, nginx_prometheus_exporter_container, peers
 ):
     state = State(
         leader=True,
-        relations=[all_worker, s3],
+        relations=[all_worker, s3, peers],
         containers=[nginx_container, nginx_prometheus_exporter_container],
     )
     return state
 
 
 @pytest.fixture
-def state_with_ingress_subdomain(
-    all_worker,
-    s3,
-    nginx_container,
-    nginx_prometheus_exporter_container,
-    ingress_subdomain,
+def state_with_ingress(
+    all_worker, s3, nginx_container, nginx_prometheus_exporter_container, ingress, peers
 ):
     state = State(
         leader=True,
-        relations=[all_worker, s3, ingress_subdomain],
-        containers=[nginx_container, nginx_prometheus_exporter_container],
-    )
-    return state
-
-
-@pytest.fixture
-def state_with_ingress_subpath(
-    all_worker,
-    s3,
-    nginx_container,
-    nginx_prometheus_exporter_container,
-    ingress_subpath,
-):
-    state = State(
-        leader=True,
-        relations=[all_worker, s3, ingress_subpath],
+        relations=[all_worker, s3, ingress, peers],
         containers=[nginx_container, nginx_prometheus_exporter_container],
     )
     return state
@@ -213,10 +193,8 @@ def test_base_url_config_without_ingress(context, state_with_s3_and_workers):
         assert actual_config_dict["api"] == expected_config
 
 
-def test_base_url_config_with_ingress_on_subdomain(
-    context, state_with_ingress_subdomain
-):
-    with context(context.on.config_changed(), state_with_ingress_subdomain) as mgr:
+def test_base_url_config_with_no_ingress(context, state_with_s3_and_workers):
+    with context(context.on.config_changed(), state_with_s3_and_workers) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
         actual_config = charm.pyroscope.config(charm.coordinator)
         actual_config_dict = yaml.safe_load(actual_config)
@@ -227,12 +205,20 @@ def test_base_url_config_with_ingress_on_subdomain(
         assert actual_config_dict["api"] == expected_config
 
 
-def test_base_url_config_with_ingress_on_subpath(context, state_with_ingress_subpath):
-    with context(context.on.config_changed(), state_with_ingress_subpath) as mgr:
+def test_base_url_config_with_ingress(context, state_with_ingress, external_host):
+    with context(context.on.config_changed(), state_with_ingress) as mgr:
         charm: PyroscopeCoordinatorCharm = mgr.charm
+        expected_prefix = f"/{state_with_ingress.model.name}-pyroscope-coordinator-k8s"
+        assert (
+            charm.ingress.is_ready()
+            and charm.ingress.external_host
+            and charm.ingress.scheme
+        )
+        assert charm._external_http_url == f"http://{external_host}{expected_prefix}"
+
         actual_config = charm.pyroscope.config(charm.coordinator)
         actual_config_dict = yaml.safe_load(actual_config)
-        expected_config = {"base-url": "/model-pyroscope-k8s"}
+        expected_config = {"base-url": expected_prefix}
         # THEN api config portion is generated
         assert "api" in actual_config_dict
         # AND this config contains the base-url used by pyroscope-UI to point at the right endpoints

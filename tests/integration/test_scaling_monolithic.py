@@ -25,7 +25,9 @@ def test_scale_pyroscope_up_stays_blocked(juju: Juju):
 
 @pytest.mark.setup
 def test_pyroscope_active_when_deploy_s3_and_workers(juju: Juju):
-    deploy_monolithic_cluster(juju, coordinator_deployed_as=PYROSCOPE_APP)
+    deploy_monolithic_cluster(
+        juju, coordinator_deployed_as=PYROSCOPE_APP, wait_for_idle=True
+    )
 
 
 @pytest.mark.teardown

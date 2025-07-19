@@ -5,8 +5,8 @@ from coordinated_workers.coordinator import Coordinator
 
 from pyroscope_config import (
     MINIMAL_DEPLOYMENT,
-    RECOMMENDED_DEPLOYMENT,
     PYROSCOPE_ROLES_CONFIG,
+    RECOMMENDED_DEPLOYMENT,
     PyroscopeRole,
 )
 

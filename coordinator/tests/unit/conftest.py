@@ -1,10 +1,14 @@
-from contextlib import contextmanager
 import json
-import pytest
+from contextlib import contextmanager
+from pathlib import Path
+from shutil import rmtree
 from unittest.mock import MagicMock, patch
-from charm import PyroscopeCoordinatorCharm
-from ops.testing import Context, Relation, Container
+
+import pytest
 from ops import ActiveStatus
+from ops.testing import Container, Context, Relation, PeerRelation
+
+from charm import PyroscopeCoordinatorCharm
 
 
 @contextmanager
@@ -23,6 +27,14 @@ def k8s_patch(status=ActiveStatus(), is_ready=True):
 @pytest.fixture()
 def coordinator():
     return MagicMock()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def cleanup_rendered_alert_rules():
+    yield
+    src_dir = Path(__file__).parent / "src"
+    if src_dir.exists():
+        rmtree(src_dir)
 
 
 @pytest.fixture
@@ -57,31 +69,22 @@ def s3(s3_config):
 
 
 @pytest.fixture(scope="function")
-def ingress_subpath():
+def external_host():
+    # traefik hostname
+    return "example.com"
+
+
+@pytest.fixture(scope="function")
+def ingress(external_host):
     return Relation(
         "ingress",
-        remote_app_data={
-            "ingress": json.dumps({"url": "http://1.2.3.5/model-pyroscope-k8s"})
-        },
-        local_unit_data={
-            "host": "localhost",
-            "ip": "127.0.0.1",
-        },
+        remote_app_data={"external_host": external_host, "scheme": "http"},
     )
 
 
 @pytest.fixture(scope="function")
-def ingress_subdomain():
-    return Relation(
-        "ingress",
-        remote_app_data={
-            "ingress": json.dumps({"url": "http://pyroscope-k8s.canonical.com"})
-        },
-        local_unit_data={
-            "host": "localhost",
-            "ip": "127.0.0.1",
-        },
-    )
+def catalogue():
+    return Relation("catalogue")
 
 
 @pytest.fixture(scope="function")
@@ -101,6 +104,13 @@ def all_worker():
                 ),
             }
         },
+    )
+
+
+@pytest.fixture(scope="function")
+def peers():
+    return PeerRelation(
+        "peers",
     )
 
 

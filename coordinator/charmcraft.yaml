@@ -96,11 +96,12 @@ requires:
     description: |
       Request an entry in a central application catalogue, to help users discover Pyroscope's UI.
   ingress:
-    interface: ingress
+    interface: traefik_route
     optional: true
     limit: 1
     description: |
-      Request an ingress endpoint to load-balance across all coordinator units.
+      Request ingress endpoints to load-balance across all coordinator units any 
+      incoming http and grpc traffic.
 
 peers:
   peers:

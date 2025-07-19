@@ -1,6 +1,6 @@
 import ops
-from ops.testing import PeerRelation, State
 from conftest import k8s_patch
+from ops.testing import PeerRelation, State
 
 
 def test_monolithic_status_no_s3_no_workers(

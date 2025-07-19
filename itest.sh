@@ -6,9 +6,9 @@ export COORDINATOR_CHARM_PATH="${root}/coordinator/pyroscope-coordinator-k8s_ubu
 export WORKER_CHARM_PATH="${root}/worker/pyroscope-worker-k8s_ubuntu@24.04-amd64.charm"
 
 if [[ $# -eq 0 ]] ; then
-    echo "usage: ./tests/integration/run_tests.sh [coordinator|worker] [PYTEST_ARGS]"
-    echo "for example: ./tests/integration/run_tests.sh -k test_self_monitoring --model bar --no-teardown --switch"
-    echo "for example: ./tests/integration/run_tests.sh coordinator -k test_self_tracing --model foo"
+    echo "usage: ./tests/integration/itest.sh [coordinator|worker] [PYTEST_ARGS]"
+    echo "for example: ./tests/integration/itest.sh -k test_self_monitoring --model bar --no-teardown --switch"
+    echo "for example: ./tests/integration/itest.sh coordinator -k test_self_tracing --model foo"
     exit 0
 fi
 

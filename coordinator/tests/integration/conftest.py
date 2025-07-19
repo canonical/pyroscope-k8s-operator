@@ -1,6 +1,7 @@
 import logging
 
 from pytest import fixture
+
 from tests.integration.helpers import get_coordinator_charm
 
 logger = logging.getLogger(__name__)
