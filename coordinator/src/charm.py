@@ -12,7 +12,7 @@ from charms.catalogue_k8s.v1.catalogue import CatalogueItem
 from charms.pyroscope_coordinator_k8s.v0.profiling import ProfilingEndpointProvider
 from charms.traefik_k8s.v0.traefik_route import TraefikRouteRequirer
 from coordinated_workers.coordinator import Coordinator
-from coordinated_workers.nginx import NginxConfig
+from coordinated_workers.nginx import NginxConfig, CA_CERT_PATH, CERT_PATH, KEY_PATH
 from ops.charm import CharmBase
 
 import nginx_config
@@ -20,6 +20,7 @@ import traefik_config
 from peers import Peers, PEERS_RELATION_ENDPOINT_NAME
 from pyroscope import Pyroscope
 from pyroscope_config import PYROSCOPE_ROLES_CONFIG
+from cosl.reconciler import all_events, observe_events
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
                 server_name=self.hostname,
                 upstream_configs=nginx_config.upstreams(Pyroscope.http_server_port),
                 server_ports_to_locations=nginx_config.server_ports_to_locations(
-                    # FIXME: check for TLS once https://github.com/canonical/pyroscope-k8s-operator/issues/231 is fixed
-                    tls_available=False,
+                    tls_available=self._are_certificates_on_disk,
                 ),
                 enable_status_page=True,
             ),
@@ -89,7 +89,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
         )
 
         # do this regardless of what event we are processing
-        self._reconcile()
+        observe_events(self, all_events, self._reconcile)
 
     ######################
     # UTILITY PROPERTIES #
@@ -98,6 +98,13 @@ class PyroscopeCoordinatorCharm(CharmBase):
     def hostname(self) -> str:
         """Unit's hostname."""
         return socket.getfqdn()
+
+    @property
+    def app_hostname(self) -> str:
+        """Application-level fqdn."""
+        return Coordinator.app_hostname(
+            hostname=self.hostname, app_name=self.app.name, model_name=self.model.name
+        )
 
     @property
     def _is_external_url_tls(self) -> bool:
@@ -138,40 +145,19 @@ class PyroscopeCoordinatorCharm(CharmBase):
         return None
 
     @property
-    def service_hostname(self) -> str:
-        """The FQDN of the k8s service associated with this application.
-
-        This service load balances traffic across all application units.
-        Falls back to this unit's DNS name if the hostname does not resolve to a Kubernetes-style fqdn.
-        """
-        # example: 'pyroscope-0.pyroscope-headless.default.svc.cluster.local'
-        hostname = self.hostname
-        hostname_parts = hostname.split(".")
-        # 'svc' is always there in a K8s service fqdn
-        # ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#services
-        if "svc" not in hostname_parts:
-            logger.debug(f"expected K8s-style fqdn, but got {hostname} instead")
-            return hostname
-
-        dns_name_parts = hostname_parts[hostname_parts.index("svc") :]
-        dns_name = ".".join(dns_name_parts)  # 'svc.cluster.local'
-        return f"{self.app.name}.{self.model.name}.{dns_name}"  # 'pyroscope.model.svc.cluster.local'
-
-    @property
     def _scheme(self) -> str:
         """Return the URI scheme that should be used when communicating with this unit."""
-        # FIXME: check for TLS once https://github.com/canonical/pyroscope-k8s-operator/issues/231 is fixed
-        return "http"
+        return "https" if self._are_certificates_on_disk else "http"
 
     @property
     def _internal_http_url(self) -> str:
         """Return the locally addressable, FQDN based service address for the http server."""
-        return f"{self._scheme}://{self.service_hostname}:{self._http_server_port}"
+        return f"{self._scheme}://{self.app_hostname}:{self._http_server_port}"
 
     @property
     def _internal_grpc_url(self) -> str:
         """Return the locally addressable, FQDN based service address for the grpc server."""
-        return f"{self.service_hostname}:{nginx_config.grpc_server_port}"
+        return f"{self.app_hostname}:{nginx_config.grpc_server_port}"
 
     @property
     def _most_external_http_url(self) -> str:
@@ -197,8 +183,11 @@ class PyroscopeCoordinatorCharm(CharmBase):
     @property
     def _http_server_port(self) -> int:
         """The http port that we should open on this pod."""
-        # FIXME: check for TLS once https://github.com/canonical/pyroscope-k8s-operator/issues/231 is fixed
-        return nginx_config.http_server_port
+        return (
+            nginx_config.https_server_port
+            if self._are_certificates_on_disk
+            else nginx_config.http_server_port
+        )
 
     @property
     def _catalogue_item(self) -> CatalogueItem:
@@ -214,6 +203,16 @@ class PyroscopeCoordinatorCharm(CharmBase):
             ),
         )
 
+    @property
+    def _are_certificates_on_disk(self) -> bool:
+        """Return True if the certificates files are on the nginx container's disk."""
+        return (
+            self._nginx_container.can_connect()
+            and self._nginx_container.exists(CERT_PATH)
+            and self._nginx_container.exists(KEY_PATH)
+            and self._nginx_container.exists(CA_CERT_PATH)
+        )
+
     def _reconcile(self):
         # This method contains unconditional update logic, i.e. logic that should be executed
         # regardless of the event we are processing.
@@ -225,8 +224,13 @@ class PyroscopeCoordinatorCharm(CharmBase):
         self._reconcile_ingress()
         self.profiling_provider.publish_endpoint(
             otlp_grpc_endpoint=self._most_external_grpc_url,
-            # FIXME: check for internal TLS once https://github.com/canonical/pyroscope-k8s-operator/issues/231 is fixed
-            insecure=not self._is_external_url_tls,
+            # if ingress is configured, rely on its TLS config
+            # otherwise check if internal TLS (certificates on disk) is configured.
+            insecure=not (
+                self._is_external_url_tls
+                if self._external_grpc_url
+                else self._are_certificates_on_disk
+            ),
         )
 
     def _reconcile_ingress(self):
@@ -239,8 +243,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
             coordinator_fqdns=self._peers.get_fqdns(),
             model_name=self.model.name,
             app_name=self.app.name,
-            # FIXME: check for TLS once https://github.com/canonical/pyroscope-k8s-operator/issues/231 is fixed
-            tls=False,
+            tls=self._are_certificates_on_disk,
             prefix=self._ingress_prefix,
         )
         self.ingress.submit_to_traefik(config=config.dynamic, static=config.static)
