@@ -19,7 +19,7 @@ def assert_profile_is_ingested(
     server_name: Optional[str] = None,
 ):
     scheme = f"http{'s' if tls else ''}"
-    port = "443" if tls else "8080"
+    port = "8080"
     target_hostname = server_name or hostname
 
     cmd = (

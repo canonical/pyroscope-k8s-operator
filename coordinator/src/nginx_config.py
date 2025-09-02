@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 grpc_server_port = 42424
 http_server_port = 8080
-https_server_port = 443
 # e2e TLS in upstream is not supported yet, so we can only support TLS termination at nginx
 upstream_tls = False
 
@@ -71,13 +70,11 @@ def upstreams(pyroscope_port: int) -> List[NginxUpstream]:
     return upstreams
 
 
-def server_ports_to_locations(
-    tls_available: bool,
-) -> Dict[int, List[NginxLocationConfig]]:
+def server_ports_to_locations() -> Dict[int, List[NginxLocationConfig]]:
     """Generate a mapping from server ports to a list of Nginx location configurations."""
 
     # send http(s) traffic to the http locations; grpc to grpc
     return {
-        https_server_port if tls_available else http_server_port: http_locations,
+        http_server_port: http_locations,
         grpc_server_port: grpc_locations,
     }

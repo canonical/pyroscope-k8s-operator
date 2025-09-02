@@ -8,7 +8,8 @@ from conftest import tls_patch
 
 
 @pytest.mark.parametrize(
-    "tls, expected_url", ((False, "http://foo.com:8080"), (True, "https://foo.com:443"))
+    "tls, expected_url",
+    ((False, "http://foo.com:8080"), (True, "https://foo.com:8080")),
 )
 def test_catalogue_no_ingress(
     context,
@@ -39,7 +40,7 @@ def test_catalogue_no_ingress(
     "tls, expected_url",
     (
         (False, "http://pyroscope-coordinator-k8s.test.svc.cluster.local:8080"),
-        (True, "https://pyroscope-coordinator-k8s.test.svc.cluster.local:443"),
+        (True, "https://pyroscope-coordinator-k8s.test.svc.cluster.local:8080"),
     ),
 )
 def test_catalogue_with_k8s_fqdn(

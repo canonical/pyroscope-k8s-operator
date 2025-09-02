@@ -71,9 +71,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
             nginx_config=NginxConfig(
                 server_name=self.hostname,
                 upstream_configs=nginx_config.upstreams(Pyroscope.http_server_port),
-                server_ports_to_locations=nginx_config.server_ports_to_locations(
-                    tls_available=self._are_certificates_on_disk,
-                ),
+                server_ports_to_locations=nginx_config.server_ports_to_locations(),
                 enable_status_page=True,
             ),
             workers_config=self.pyroscope.config,
@@ -183,11 +181,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
     @property
     def _http_server_port(self) -> int:
         """The http port that we should open on this pod."""
-        return (
-            nginx_config.https_server_port
-            if self._are_certificates_on_disk
-            else nginx_config.http_server_port
-        )
+        return nginx_config.http_server_port
 
     @property
     def _catalogue_item(self) -> CatalogueItem:
