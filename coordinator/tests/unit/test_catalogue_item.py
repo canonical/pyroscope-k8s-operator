@@ -2,10 +2,15 @@ from unittest.mock import patch
 
 import ops
 
-import nginx_config
-from ops.testing import State
+from ops.testing import State, Model
+import pytest
+from conftest import tls_patch
 
 
+@pytest.mark.parametrize(
+    "tls, expected_url",
+    ((False, "http://foo.com:8080"), (True, "https://foo.com:8080")),
+)
 def test_catalogue_no_ingress(
     context,
     s3,
@@ -14,8 +19,10 @@ def test_catalogue_no_ingress(
     nginx_prometheus_exporter_container,
     catalogue,
     peers,
+    tls,
+    expected_url,
 ):
-    with patch("socket.getfqdn", new=lambda: "foo.com"):
+    with tls_patch(tls):
         state_out = context.run(
             context.on.update_status(),
             State(
@@ -26,9 +33,16 @@ def test_catalogue_no_ingress(
             ),
         )
     catalogue_out = state_out.get_relation(catalogue.id)
-    assert catalogue_out.local_app_data["url"] == "http://foo.com:8080"
+    assert catalogue_out.local_app_data["url"] == expected_url
 
 
+@pytest.mark.parametrize(
+    "tls, expected_url",
+    (
+        (False, "http://pyroscope-coordinator-k8s.test.svc.cluster.local:8080"),
+        (True, "https://pyroscope-coordinator-k8s.test.svc.cluster.local:8080"),
+    ),
+)
 def test_catalogue_with_k8s_fqdn(
     context,
     s3,
@@ -36,29 +50,36 @@ def test_catalogue_with_k8s_fqdn(
     nginx_container,
     nginx_prometheus_exporter_container,
     catalogue,
-    external_host,
     peers,
+    tls,
+    expected_url,
 ):
-    with patch(
-        "socket.getfqdn",
-        new=lambda: "something-something.something-else.svc.cluster.local",
-    ):
-        state_out = context.run(
-            context.on.update_status(),
-            State(
-                relations=[peers, s3, all_worker, catalogue],
-                containers=[nginx_container, nginx_prometheus_exporter_container],
-                unit_status=ops.ActiveStatus(),
-                leader=True,
-            ),
-        )
+    with tls_patch(tls):
+        with patch(
+            "socket.getfqdn",
+            new=lambda: "something-something.something-else.svc.cluster.local",
+        ):
+            state_out = context.run(
+                context.on.update_status(),
+                State(
+                    relations=[peers, s3, all_worker, catalogue],
+                    containers=[nginx_container, nginx_prometheus_exporter_container],
+                    unit_status=ops.ActiveStatus(),
+                    leader=True,
+                    model=Model(name="test"),
+                ),
+            )
     catalogue_out = state_out.get_relation(catalogue.id)
-    assert (
-        catalogue_out.local_app_data["url"]
-        == f"http://pyroscope-coordinator-k8s.{state_out.model.name}.svc.cluster.local:{nginx_config.http_server_port}"
-    )
+    assert catalogue_out.local_app_data["url"] == expected_url
 
 
+@pytest.mark.parametrize(
+    "tls, expected_url",
+    (
+        (False, "http://example.com/test-pyroscope-coordinator-k8s"),
+        (True, "https://example.com/test-pyroscope-coordinator-k8s"),
+    ),
+)
 def test_catalogue_ingress(
     context,
     s3,
@@ -67,21 +88,27 @@ def test_catalogue_ingress(
     nginx_prometheus_exporter_container,
     catalogue,
     ingress,
+    ingress_with_tls,
     external_host,
     peers,
+    tls,
+    expected_url,
 ):
-    with patch("socket.getfqdn", new=lambda: "foo.com"):
-        state_out = context.run(
-            context.on.update_status(),
-            State(
-                relations=[peers, s3, ingress, all_worker, catalogue],
-                containers=[nginx_container, nginx_prometheus_exporter_container],
-                unit_status=ops.ActiveStatus(),
-                leader=True,
-            ),
-        )
-    catalogue_out = state_out.get_relation(catalogue.id)
-    assert (
-        catalogue_out.local_app_data["url"]
-        == f"http://{external_host}/{state_out.model.name}-pyroscope-coordinator-k8s"
+    state_out = context.run(
+        context.on.update_status(),
+        State(
+            relations=[
+                peers,
+                s3,
+                ingress_with_tls if tls else ingress,
+                all_worker,
+                catalogue,
+            ],
+            containers=[nginx_container, nginx_prometheus_exporter_container],
+            unit_status=ops.ActiveStatus(),
+            leader=True,
+            model=Model(name="test"),
+        ),
     )
+    catalogue_out = state_out.get_relation(catalogue.id)
+    assert catalogue_out.local_app_data["url"] == expected_url

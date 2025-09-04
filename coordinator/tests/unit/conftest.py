@@ -24,6 +24,12 @@ def k8s_patch(status=ActiveStatus(), is_ready=True):
             yield patcher
 
 
+@contextmanager
+def tls_patch(tls=False):
+    with patch("charm.PyroscopeCoordinatorCharm._are_certificates_on_disk", tls):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def patch_consolidate_alert_rules():
     with patch("coordinated_workers.coordinator.Coordinator._consolidate_alert_rules"):
@@ -47,7 +53,7 @@ def cleanup_rendered_alert_rules():
 
 @pytest.fixture
 def pyroscope_charm():
-    with patch("socket.getfqdn", return_value="localhost"):
+    with patch("socket.getfqdn", return_value="foo.com"):
         with k8s_patch():
             yield PyroscopeCoordinatorCharm
 

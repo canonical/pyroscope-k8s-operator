@@ -17,28 +17,45 @@ logger = logging.getLogger(__name__)
 
 grpc_server_port = 42424
 http_server_port = 8080
-https_server_port = 443
+# e2e TLS in upstream is not supported yet, so we can only support TLS termination at nginx
+upstream_tls = False
 
 http_locations: List[NginxLocationConfig] = [
     NginxLocationConfig(
-        path="/", backend="worker", modifier="="
+        path="/",
+        backend="worker",
+        modifier="=",
+        upstream_tls=upstream_tls,
     ),  # pyroscope UI - not bound to a specific role
-    NginxLocationConfig(path="/assets", backend="worker"),
-    NginxLocationConfig(path="/ingest", backend="distributor", modifier="="),
+    NginxLocationConfig(path="/assets", backend="worker", upstream_tls=upstream_tls),
     NginxLocationConfig(
-        path="/pyroscope", backend="query-frontend", modifier=""
+        path="/ingest", backend="distributor", modifier="=", upstream_tls=upstream_tls
+    ),
+    NginxLocationConfig(
+        path="/pyroscope",
+        backend="query-frontend",
+        modifier="",
+        upstream_tls=upstream_tls,
     ),  # API queries
     NginxLocationConfig(
         path="/querier",
         backend="query-frontend",
+        upstream_tls=upstream_tls,
     ),  # called by the frontend
-    NginxLocationConfig(path="/settings", backend="tenant-settings"),
-    NginxLocationConfig(path="/adhocprofiles", backend="ad-hoc-profiles"),
+    NginxLocationConfig(
+        path="/settings", backend="tenant-settings", upstream_tls=upstream_tls
+    ),
+    NginxLocationConfig(
+        path="/adhocprofiles", backend="ad-hoc-profiles", upstream_tls=upstream_tls
+    ),
 ]
 
 grpc_locations: List[NginxLocationConfig] = [
     NginxLocationConfig(
-        path="/opentelemetry.proto.collector", backend="distributor", is_grpc=True
+        path="/opentelemetry.proto.collector",
+        backend="distributor",
+        is_grpc=True,
+        upstream_tls=upstream_tls,
     )
 ]
 
@@ -53,13 +70,11 @@ def upstreams(pyroscope_port: int) -> List[NginxUpstream]:
     return upstreams
 
 
-def server_ports_to_locations(
-    tls_available: bool,
-) -> Dict[int, List[NginxLocationConfig]]:
+def server_ports_to_locations() -> Dict[int, List[NginxLocationConfig]]:
     """Generate a mapping from server ports to a list of Nginx location configurations."""
 
     # send http(s) traffic to the http locations; grpc to grpc
     return {
-        https_server_port if tls_available else http_server_port: http_locations,
+        http_server_port: http_locations,
         grpc_server_port: grpc_locations,
     }
