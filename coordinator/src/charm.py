@@ -49,6 +49,7 @@ class PyroscopeCoordinatorCharm(CharmBase):
         self.profiling_provider = ProfilingEndpointProvider(
             self.model.relations["profiling"], self.app
         )
+
         self.coordinator = Coordinator(
             charm=self,
             roles_config=PYROSCOPE_ROLES_CONFIG,
