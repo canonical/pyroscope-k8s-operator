@@ -8,14 +8,14 @@ on:
 jobs:
     tiobe-scan-coordinator:
         name: TiCs-coordinator
-        uses: canonical/observability/.github/workflows/charm-tiobe-scan.yaml@v1
+        uses: canonical/observability/.github/workflows/charm-tiobe-scan.yaml@78f655bd7446ee040b26cfe5d2e095b6dfdc3423 # v1
         with:
             charm-path: ./coordinator
             tiobe-project-name: pyroscope-coordinator-k8s
         secrets: inherit
     tiobe-scan-worker:
         name: TiCs-worker
-        uses: canonical/observability/.github/workflows/charm-tiobe-scan.yaml@v1
+        uses: canonical/observability/.github/workflows/charm-tiobe-scan.yaml@78f655bd7446ee040b26cfe5d2e095b6dfdc3423 # v1
         with:
             charm-path: ./worker
             tiobe-project-name: pyroscope-worker-k8s

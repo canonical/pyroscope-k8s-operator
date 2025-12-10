@@ -14,10 +14,10 @@ jobs:
       worker_changed: ${{ steps.worker-changed-files.outputs.any_modified }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Determine changed files in the coordinator
         id: coordinator-changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@48d8f15b2aaa3d255ca5af3eba4870f807ce6b3c # v45
         with:
           files: coordinator/**
           files_ignore: |
@@ -31,7 +31,7 @@ jobs:
             .github/**
       - name: Determine changed files in the worker
         id: worker-changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@48d8f15b2aaa3d255ca5af3eba4870f807ce6b3c # v45
         with:
           files: worker/**
           files_ignore: |
@@ -46,7 +46,7 @@ jobs:
   release-worker:
     needs: charms-changed
     if: needs.charms-changed.outputs.worker_changed == 'true'
-    uses: canonical/observability/.github/workflows/charm-release.yaml@v1
+    uses: canonical/observability/.github/workflows/charm-release.yaml@78f655bd7446ee040b26cfe5d2e095b6dfdc3423 # v1
     secrets: inherit
     with:
       default-track: dev
@@ -55,7 +55,7 @@ jobs:
   release-coordinator:
     needs: charms-changed
     if: needs.charms-changed.outputs.coordinator_changed == 'true'
-    uses: canonical/observability/.github/workflows/charm-release.yaml@v1
+    uses: canonical/observability/.github/workflows/charm-release.yaml@78f655bd7446ee040b26cfe5d2e095b6dfdc3423 # v1
     secrets: inherit
     with:
       default-track: dev
