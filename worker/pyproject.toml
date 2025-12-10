@@ -25,7 +25,7 @@ dev = [
     "pyright",
     "ruff",
 #   INTERFACE TESTS
-    "pytest-interface-tester==3.3.1",
+    "pytest-interface-tester==3.4.0",
 ]
 
 [tool.pyright]
